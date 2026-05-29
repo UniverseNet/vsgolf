@@ -23,6 +23,42 @@
         </div>
       </section>
 
+      <section class="setup-panel" aria-label="상대와 시작 핸디 설정">
+        <div class="section-heading">
+          <div>
+            <p class="section-heading__eyebrow">Match Setup</p>
+            <h2>상대 설정</h2>
+          </div>
+          <output class="section-heading__value" id="activeOpponentText">상대</output>
+        </div>
+
+        <div class="setup-grid">
+          <label class="setup-field" for="opponentSelect">
+            <span>상대 선택</span>
+            <select id="opponentSelect"></select>
+          </label>
+
+          <label class="setup-field" for="opponentNameInput">
+            <span>새 상대 이름</span>
+            <input id="opponentNameInput" type="text" maxlength="20" placeholder="이름 입력" autocomplete="off" />
+          </label>
+
+          <div class="setup-actions" aria-label="상대 관리">
+            <button class="utility-button" type="button" id="addOpponentButton">
+              상대 추가
+            </button>
+            <button class="utility-button utility-button--danger" type="button" id="deleteOpponentButton">
+              상대 삭제
+            </button>
+          </div>
+
+          <label class="setup-field setup-field--handicap" for="startHandicapInput">
+            <span>시작 핸디</span>
+            <input id="startHandicapInput" type="number" min="0" max="99" step="1" value="10" inputmode="numeric" />
+          </label>
+        </div>
+      </section>
+
       <section class="dashboard" aria-label="현재 내기 상태">
         <article class="metric metric--mine">
           <span class="metric__label">내 부담</span>
@@ -95,7 +131,7 @@
           </div>
           <div class="handicap-meter__labels">
             <span id="minHandicapText">+0</span>
-            <span>시작 +10</span>
+            <span id="startHandicapText">시작 +10</span>
             <span id="maxHandicapText">+20</span>
           </div>
         </div>

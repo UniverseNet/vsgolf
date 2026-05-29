@@ -35,7 +35,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -169,6 +170,7 @@ button:disabled {
 }
 
 .dashboard,
+.setup-panel,
 .split-panel,
 .handicap-panel,
 .control-panel,
@@ -183,6 +185,7 @@ button:disabled {
 }
 
 .metric,
+.setup-panel,
 .split-panel,
 .handicap-panel,
 .history-panel {
@@ -226,9 +229,51 @@ button:disabled {
 }
 
 .split-panel,
+.setup-panel,
 .handicap-panel,
 .history-panel {
   padding: 24px;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(220px, auto) minmax(120px, 0.5fr);
+  gap: 14px;
+  align-items: end;
+}
+
+.setup-field {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.setup-field--handicap {
+  max-width: 210px;
+}
+
+.setup-field input,
+.setup-field select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: #fbfdf9;
+}
+
+.setup-field input:focus,
+.setup-field select:focus {
+  border-color: var(--accent);
+  outline: 3px solid rgba(47, 143, 91, 0.18);
+}
+
+.setup-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .section-heading {
@@ -452,6 +497,12 @@ button:disabled {
   border: 1px solid var(--line);
 }
 
+.utility-button--danger {
+  color: #8b2b21;
+  border-color: #f0bab2;
+  background: #fff7f5;
+}
+
 .history-list {
   display: grid;
   gap: 10px;
@@ -532,9 +583,18 @@ button:disabled {
   }
 
   .dashboard,
+  .setup-grid,
   .amount-grid,
   .rule-grid,
   .control-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-field--handicap {
+    max-width: none;
+  }
+
+  .setup-actions {
     grid-template-columns: 1fr;
   }
 
