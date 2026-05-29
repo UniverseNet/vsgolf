@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>스크린골프 저녁내기 진행판</title>
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <main class="bet-board">
+      <section class="bet-board__hero" aria-labelledby="page-title">
+        <div class="bet-board__hero-content">
+          <p class="bet-board__eyebrow">Screen Golf Dinner Match</p>
+          <h1 id="page-title">저녁내기 진행판</h1>
+          <p class="bet-board__summary" id="roundSummary">1번째 내기 기준</p>
+        </div>
+
+        <div class="course-visual" aria-hidden="true">
+          <span class="course-visual__pin"></span>
+          <span class="course-visual__green"></span>
+          <span class="course-visual__line"></span>
+          <span class="course-visual__ball"></span>
+        </div>
+      </section>
+
+      <section class="dashboard" aria-label="현재 내기 상태">
+        <article class="metric metric--mine">
+          <span class="metric__label">내 부담</span>
+          <strong class="metric__value" id="myShareText">5점</strong>
+          <span class="metric__sub-value" id="myAmountText">50%</span>
+        </article>
+
+        <article class="metric metric--handicap">
+          <span class="metric__label">내 핸디</span>
+          <strong class="metric__value" id="handicapText">+10</strong>
+          <span class="metric__sub-value" id="handicapDeltaText">시작 기준</span>
+        </article>
+
+        <article class="metric metric--opponent">
+          <span class="metric__label">상대 부담</span>
+          <strong class="metric__value" id="opponentShareText">5점</strong>
+          <span class="metric__sub-value" id="opponentAmountText">50%</span>
+        </article>
+      </section>
+
+      <section class="split-panel" aria-label="비용 부담 비율">
+        <div class="section-heading">
+          <div>
+            <p class="section-heading__eyebrow">Payment Split</p>
+            <h2>저녁값 부담 비율</h2>
+          </div>
+          <output class="section-heading__value" id="splitRatioText">5 : 5</output>
+        </div>
+
+        <div class="split-bar" aria-hidden="true">
+          <span class="split-bar__mine" id="myShareBar"></span>
+          <span class="split-bar__opponent" id="opponentShareBar"></span>
+        </div>
+
+        <div class="split-panel__legend">
+          <span><i class="legend-dot legend-dot--mine"></i>나</span>
+          <span><i class="legend-dot legend-dot--opponent"></i>상대</span>
+        </div>
+
+        <label class="dinner-price" for="dinnerPriceInput">
+          <span>예상 저녁값</span>
+          <input id="dinnerPriceInput" type="number" min="0" step="1000" value="100000" inputmode="numeric" />
+        </label>
+
+        <div class="amount-grid" aria-label="예상 결제 금액">
+          <article class="amount-grid__item">
+            <span>내 예상 결제</span>
+            <strong id="myCostText">50,000원</strong>
+          </article>
+          <article class="amount-grid__item">
+            <span>상대 예상 결제</span>
+            <strong id="opponentCostText">50,000원</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="handicap-panel" aria-label="핸디 변화">
+        <div class="section-heading">
+          <div>
+            <p class="section-heading__eyebrow">Handicap</p>
+            <h2>핸디 추이</h2>
+          </div>
+          <output class="section-heading__value" id="recordText">0승 0패</output>
+        </div>
+
+        <div class="handicap-meter">
+          <div class="handicap-meter__track" aria-hidden="true">
+            <span class="handicap-meter__start" id="handicapStartMarker"></span>
+            <span class="handicap-meter__marker" id="handicapMarker"></span>
+          </div>
+          <div class="handicap-meter__labels">
+            <span id="minHandicapText">+0</span>
+            <span>시작 +10</span>
+            <span id="maxHandicapText">+20</span>
+          </div>
+        </div>
+
+        <div class="rule-grid" aria-label="조정 규칙">
+          <article class="rule-grid__item rule-grid__item--win">
+            <span>내가 이기면</span>
+            <strong>부담 -1점 · 핸디 -1</strong>
+          </article>
+          <article class="rule-grid__item rule-grid__item--lose">
+            <span>내가 지면</span>
+            <strong>부담 +1점 · 핸디 +1</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="control-panel" aria-label="내기 결과 입력">
+        <button class="result-button result-button--win" type="button" id="winButton">
+          내가 이겼음
+        </button>
+        <button class="result-button result-button--lose" type="button" id="loseButton">
+          내가 졌음
+        </button>
+        <button class="utility-button" type="button" id="undoButton" disabled>
+          되돌리기
+        </button>
+        <button class="utility-button" type="button" id="resetButton">
+          초기화
+        </button>
+      </section>
+
+      <section class="history-panel" aria-label="진행 기록">
+        <div class="section-heading">
+          <div>
+            <p class="section-heading__eyebrow">History</p>
+            <h2>라운드 기록</h2>
+          </div>
+        </div>
+        <ol class="history-list" id="historyList"></ol>
+      </section>
+    </main>
+
+    <script src="./assets/app.js"></script>
+  </body>
+</html>
