@@ -1,7 +1,7 @@
 const INITIAL_STATE = Object.freeze({
   myShare: 5,
   opponentShare: 5,
-  handicap: 10,
+  handicap: 9,
   wins: 0,
   losses: 0,
   history: [],
