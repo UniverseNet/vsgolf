@@ -145,6 +145,8 @@ let pendingDeleteOpponentId = null;
 const elements = {
   roundSummary: document.querySelector('#roundSummary'),
   activeOpponentText: document.querySelector('#activeOpponentText'),
+  opponentCountText: document.querySelector('#opponentCountText'),
+  saveStatusText: document.querySelector('#saveStatusText'),
   opponentSelect: document.querySelector('#opponentSelect'),
   opponentNameInput: document.querySelector('#opponentNameInput'),
   addOpponentButton: document.querySelector('#addOpponentButton'),
@@ -229,8 +231,11 @@ const saveAppState = () => {
         })),
       }),
     );
+
+    elements.saveStatusText.textContent = '저장됨';
   } catch (error) {
     console.warn('내기 정보를 저장하지 못했습니다.', error);
+    elements.saveStatusText.textContent = '저장 실패';
   }
 };
 
@@ -349,6 +354,7 @@ const render = () => {
 
   elements.roundSummary.textContent = `${activeOpponent.name} · ${matchState.history.length + 1}번째 내기 기준`;
   elements.activeOpponentText.textContent = activeOpponent.name;
+  elements.opponentCountText.textContent = `상대 ${appState.opponents.length}명`;
   elements.opponentSelect.value = activeOpponent.id;
   elements.startHandicapInput.value = String(activeOpponent.initialHandicap);
   elements.deleteOpponentButton.disabled = appState.opponents.length <= 1;

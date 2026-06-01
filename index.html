@@ -3,33 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101a17" />
     <title>스크린골프 저녁내기 진행판</title>
     <link rel="stylesheet" href="./assets/styles.css" />
   </head>
   <body>
     <main class="bet-board">
-      <section class="bet-board__hero" aria-labelledby="page-title">
-        <div class="bet-board__hero-content">
-          <p class="bet-board__eyebrow">Screen Golf Dinner Match</p>
-          <h1 id="page-title">저녁내기 진행판</h1>
-          <p class="bet-board__summary" id="roundSummary">1번째 내기 기준</p>
+      <header class="app-header" aria-labelledby="page-title">
+        <div class="app-header__identity">
+          <span class="app-header__mark" aria-hidden="true"></span>
+          <div class="app-header__title">
+            <p class="app-header__eyebrow">Dinner Match Board</p>
+            <h1 id="page-title">저녁내기 보드</h1>
+            <p class="app-header__summary" id="roundSummary">1번째 내기 기준</p>
+          </div>
         </div>
 
-        <div class="course-visual" aria-hidden="true">
-          <span class="course-visual__pin"></span>
-          <span class="course-visual__green"></span>
-          <span class="course-visual__line"></span>
-          <span class="course-visual__ball"></span>
+        <div class="app-header__meta" aria-label="보드 상태">
+          <output class="status-pill status-pill--active" id="activeOpponentText">상대</output>
+          <output class="status-pill" id="opponentCountText">상대 1명</output>
+          <output class="save-status" id="saveStatusText">저장됨</output>
         </div>
-      </section>
+      </header>
 
       <section class="setup-panel" aria-label="상대와 시작 핸디 설정">
         <div class="section-heading">
           <div>
-            <p class="section-heading__eyebrow">Match Setup</p>
+            <p class="section-heading__eyebrow">Setup</p>
             <h2>상대 설정</h2>
           </div>
-          <output class="section-heading__value" id="activeOpponentText">상대</output>
         </div>
 
         <div class="setup-grid">
@@ -44,10 +46,10 @@
           </label>
 
           <div class="setup-actions" aria-label="상대 관리">
-            <button class="utility-button" type="button" id="addOpponentButton">
+            <button class="button button--neutral" type="button" id="addOpponentButton">
               상대 추가
             </button>
-            <button class="utility-button utility-button--danger" type="button" id="deleteOpponentButton">
+            <button class="button button--danger" type="button" id="deleteOpponentButton">
               상대 삭제
             </button>
           </div>
@@ -79,86 +81,88 @@
         </article>
       </section>
 
-      <section class="split-panel" aria-label="비용 부담 비율">
-        <div class="section-heading">
-          <div>
-            <p class="section-heading__eyebrow">Payment Split</p>
-            <h2>저녁값 부담 비율</h2>
+      <div class="insight-grid">
+        <section class="split-panel" aria-label="비용 부담 비율">
+          <div class="section-heading">
+            <div>
+              <p class="section-heading__eyebrow">Split</p>
+              <h2>저녁값 부담 비율</h2>
+            </div>
+            <output class="section-heading__value" id="splitRatioText">5 : 5</output>
           </div>
-          <output class="section-heading__value" id="splitRatioText">5 : 5</output>
-        </div>
 
-        <div class="split-bar" aria-hidden="true">
-          <span class="split-bar__mine" id="myShareBar"></span>
-          <span class="split-bar__opponent" id="opponentShareBar"></span>
-        </div>
-
-        <div class="split-panel__legend">
-          <span><i class="legend-dot legend-dot--mine"></i>나</span>
-          <span><i class="legend-dot legend-dot--opponent"></i>상대</span>
-        </div>
-
-        <label class="dinner-price" for="dinnerPriceInput">
-          <span>예상 저녁값</span>
-          <input id="dinnerPriceInput" type="number" min="0" step="1000" value="100000" inputmode="numeric" />
-        </label>
-
-        <div class="amount-grid" aria-label="예상 결제 금액">
-          <article class="amount-grid__item">
-            <span>내 예상 결제</span>
-            <strong id="myCostText">50,000원</strong>
-          </article>
-          <article class="amount-grid__item">
-            <span>상대 예상 결제</span>
-            <strong id="opponentCostText">50,000원</strong>
-          </article>
-        </div>
-      </section>
-
-      <section class="handicap-panel" aria-label="핸디 변화">
-        <div class="section-heading">
-          <div>
-            <p class="section-heading__eyebrow">Handicap</p>
-            <h2>핸디 추이</h2>
+          <div class="split-bar" aria-hidden="true">
+            <span class="split-bar__mine" id="myShareBar"></span>
+            <span class="split-bar__opponent" id="opponentShareBar"></span>
           </div>
-          <output class="section-heading__value" id="recordText">0승 0패</output>
-        </div>
 
-        <div class="handicap-meter">
-          <div class="handicap-meter__track" aria-hidden="true">
-            <span class="handicap-meter__start" id="handicapStartMarker"></span>
-            <span class="handicap-meter__marker" id="handicapMarker"></span>
+          <div class="split-panel__legend">
+            <span><i class="legend-dot legend-dot--mine"></i>나</span>
+            <span><i class="legend-dot legend-dot--opponent"></i>상대</span>
           </div>
-          <div class="handicap-meter__labels">
-            <span id="minHandicapText">+0</span>
-            <span id="startHandicapText">시작 +10</span>
-            <span id="maxHandicapText">+20</span>
-          </div>
-        </div>
 
-        <div class="rule-grid" aria-label="조정 규칙">
-          <article class="rule-grid__item rule-grid__item--win">
-            <span>내가 이기면</span>
-            <strong>부담 -1점 · 핸디 -1</strong>
-          </article>
-          <article class="rule-grid__item rule-grid__item--lose">
-            <span>내가 지면</span>
-            <strong>부담 +1점 · 핸디 +1</strong>
-          </article>
-        </div>
-      </section>
+          <label class="dinner-price" for="dinnerPriceInput">
+            <span>예상 저녁값</span>
+            <input id="dinnerPriceInput" type="number" min="0" step="1000" value="100000" inputmode="numeric" />
+          </label>
+
+          <div class="amount-grid" aria-label="예상 결제 금액">
+            <article class="amount-grid__item">
+              <span>내 예상 결제</span>
+              <strong id="myCostText">50,000원</strong>
+            </article>
+            <article class="amount-grid__item">
+              <span>상대 예상 결제</span>
+              <strong id="opponentCostText">50,000원</strong>
+            </article>
+          </div>
+        </section>
+
+        <section class="handicap-panel" aria-label="핸디 변화">
+          <div class="section-heading">
+            <div>
+              <p class="section-heading__eyebrow">Handicap</p>
+              <h2>핸디 추이</h2>
+            </div>
+            <output class="section-heading__value" id="recordText">0승 0패</output>
+          </div>
+
+          <div class="handicap-meter">
+            <div class="handicap-meter__track" aria-hidden="true">
+              <span class="handicap-meter__start" id="handicapStartMarker"></span>
+              <span class="handicap-meter__marker" id="handicapMarker"></span>
+            </div>
+            <div class="handicap-meter__labels">
+              <span id="minHandicapText">+0</span>
+              <span id="startHandicapText">시작 +10</span>
+              <span id="maxHandicapText">+20</span>
+            </div>
+          </div>
+
+          <div class="rule-grid" aria-label="조정 규칙">
+            <article class="rule-grid__item rule-grid__item--win">
+              <span>내가 이기면</span>
+              <strong>부담 -1점 · 핸디 -1</strong>
+            </article>
+            <article class="rule-grid__item rule-grid__item--lose">
+              <span>내가 지면</span>
+              <strong>부담 +1점 · 핸디 +1</strong>
+            </article>
+          </div>
+        </section>
+      </div>
 
       <section class="control-panel" aria-label="내기 결과 입력">
         <button class="result-button result-button--win" type="button" id="winButton">
-          내가 이겼음
+          승리 입력
         </button>
         <button class="result-button result-button--lose" type="button" id="loseButton">
-          내가 졌음
+          패배 입력
         </button>
-        <button class="utility-button" type="button" id="undoButton" disabled>
+        <button class="button button--neutral" type="button" id="undoButton" disabled>
           되돌리기
         </button>
-        <button class="utility-button" type="button" id="resetButton">
+        <button class="button button--neutral" type="button" id="resetButton">
           초기화
         </button>
       </section>
