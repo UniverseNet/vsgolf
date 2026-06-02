@@ -143,6 +143,7 @@ let appState = loadStoredAppState();
 let pendingDeleteOpponentId = null;
 
 const elements = {
+  board: document.querySelector('.bet-board'),
   roundSummary: document.querySelector('#roundSummary'),
   activeOpponentText: document.querySelector('#activeOpponentText'),
   opponentCountText: document.querySelector('#opponentCountText'),
@@ -159,6 +160,7 @@ const elements = {
   opponentShareText: document.querySelector('#opponentShareText'),
   opponentAmountText: document.querySelector('#opponentAmountText'),
   splitRatioText: document.querySelector('#splitRatioText'),
+  splitBar: document.querySelector('.split-bar'),
   myShareBar: document.querySelector('#myShareBar'),
   opponentShareBar: document.querySelector('#opponentShareBar'),
   dinnerPriceInput: document.querySelector('#dinnerPriceInput'),
@@ -175,6 +177,61 @@ const elements = {
   undoButton: document.querySelector('#undoButton'),
   resetButton: document.querySelector('#resetButton'),
   historyList: document.querySelector('#historyList'),
+};
+
+let hasRendered = false;
+let previousHistorySignature = '';
+const motionTimers = new WeakMap();
+
+const restartMotionClass = (element, className, duration = 420) => {
+  if (!element) {
+    return;
+  }
+
+  const activeTimer = motionTimers.get(element);
+
+  if (activeTimer) {
+    window.clearTimeout(activeTimer);
+  }
+
+  element.classList.remove(className);
+  window.requestAnimationFrame(() => {
+    element.classList.add(className);
+    const timerId = window.setTimeout(() => {
+      element.classList.remove(className);
+      motionTimers.delete(element);
+    }, duration);
+
+    motionTimers.set(element, timerId);
+  });
+};
+
+const setAnimatedText = (element, textContent) => {
+  const nextTextContent = String(textContent);
+  const shouldAnimate = hasRendered && element.textContent !== nextTextContent;
+
+  element.textContent = nextTextContent;
+
+  if (shouldAnimate) {
+    restartMotionClass(element, 'is-value-changing');
+  }
+};
+
+const setAnimatedStyle = (element, propertyName, propertyValue, duration = 420, className = null) => {
+  const previousValue = element.style[propertyName];
+  const shouldAnimate = hasRendered && previousValue && previousValue !== propertyValue;
+
+  element.style[propertyName] = propertyValue;
+
+  if (shouldAnimate && className) {
+    restartMotionClass(element, className, duration);
+  }
+};
+
+const playResultFeedback = (result) => {
+  const feedbackClassName = result === 'win' ? 'is-win-feedback' : 'is-lose-feedback';
+
+  restartMotionClass(elements.board, feedbackClassName, 560);
 };
 
 const getActiveOpponent = () =>
@@ -232,10 +289,11 @@ const saveAppState = () => {
       }),
     );
 
-    elements.saveStatusText.textContent = '저장됨';
+    setAnimatedText(elements.saveStatusText, '저장됨');
+    restartMotionClass(elements.saveStatusText, 'is-value-changing');
   } catch (error) {
     console.warn('내기 정보를 저장하지 못했습니다.', error);
-    elements.saveStatusText.textContent = '저장 실패';
+    setAnimatedText(elements.saveStatusText, '저장 실패');
   }
 };
 
@@ -286,9 +344,13 @@ const getHandicapDeltaText = (matchState, activeOpponent) => {
   return delta > 0 ? `시작보다 +${delta}` : `시작보다 ${delta}`;
 };
 
-const createHistoryItem = (entry) => {
+const createHistoryItem = (entry, isLatest = false) => {
   const listItem = document.createElement('li');
   listItem.className = 'history-item';
+
+  if (isLatest) {
+    listItem.classList.add('history-item--latest');
+  }
 
   const round = document.createElement('span');
   round.className = 'history-item__round';
@@ -331,14 +393,19 @@ const renderOpponentOptions = () => {
 };
 
 const renderHistory = (matchState) => {
+  const nextHistorySignature = matchState.history.map((entry) => entry.result).join('|');
+  const shouldAnimateLatest = hasRendered && nextHistorySignature !== previousHistorySignature;
+
   elements.historyList.replaceChildren();
 
   matchState.history
     .slice()
     .reverse()
-    .forEach((entry) => {
-      elements.historyList.append(createHistoryItem(entry));
+    .forEach((entry, index) => {
+      elements.historyList.append(createHistoryItem(entry, index === 0 && shouldAnimateLatest));
     });
+
+  previousHistorySignature = nextHistorySignature;
 };
 
 const render = () => {
@@ -346,42 +413,51 @@ const render = () => {
   const matchState = buildMatchState(activeOpponent);
   const mySharePercent = matchState.myShare * 10;
   const opponentSharePercent = matchState.opponentShare * 10;
+  const nextMyShareBarWidth = `${mySharePercent}%`;
+  const nextOpponentShareBarWidth = `${opponentSharePercent}%`;
+  const shouldAnimateSplitBar =
+    hasRendered && elements.myShareBar.style.width && elements.myShareBar.style.width !== nextMyShareBarWidth;
   const dinnerPrice = getDinnerPrice();
   const myCost = dinnerPrice * (matchState.myShare / SHARE_TOTAL);
   const opponentCost = dinnerPrice * (matchState.opponentShare / SHARE_TOTAL);
 
   renderOpponentOptions();
 
-  elements.roundSummary.textContent = `${activeOpponent.name} · ${matchState.history.length + 1}번째 내기 기준`;
-  elements.activeOpponentText.textContent = activeOpponent.name;
-  elements.opponentCountText.textContent = `상대 ${appState.opponents.length}명`;
+  setAnimatedText(elements.roundSummary, `${activeOpponent.name} · ${matchState.history.length + 1}번째 내기 기준`);
+  setAnimatedText(elements.activeOpponentText, activeOpponent.name);
+  setAnimatedText(elements.opponentCountText, `상대 ${appState.opponents.length}명`);
   elements.opponentSelect.value = activeOpponent.id;
   elements.startHandicapInput.value = String(activeOpponent.initialHandicap);
   elements.deleteOpponentButton.disabled = appState.opponents.length <= 1;
   elements.deleteOpponentButton.textContent =
     pendingDeleteOpponentId === activeOpponent.id ? '삭제 확인' : '상대 삭제';
-  elements.myShareText.textContent = `${matchState.myShare}점`;
-  elements.myAmountText.textContent = `${mySharePercent}%`;
-  elements.handicapText.textContent = `+${matchState.handicap}`;
-  elements.handicapDeltaText.textContent = getHandicapDeltaText(matchState, activeOpponent);
-  elements.opponentShareText.textContent = `${matchState.opponentShare}점`;
-  elements.opponentAmountText.textContent = `${opponentSharePercent}%`;
-  elements.splitRatioText.textContent = `${matchState.myShare} : ${matchState.opponentShare}`;
-  elements.myShareBar.style.width = `${mySharePercent}%`;
-  elements.opponentShareBar.style.width = `${opponentSharePercent}%`;
-  elements.myCostText.textContent = formatWon(myCost);
-  elements.opponentCostText.textContent = formatWon(opponentCost);
-  elements.recordText.textContent = `${matchState.wins}승 ${matchState.losses}패`;
-  elements.handicapMarker.style.left = `${getHandicapPercent(matchState, activeOpponent)}%`;
-  elements.handicapStartMarker.style.left = `${getStartHandicapPercent(matchState, activeOpponent)}%`;
-  elements.minHandicapText.textContent = `+${HANDICAP_MIN}`;
-  elements.startHandicapText.textContent = `시작 +${activeOpponent.initialHandicap}`;
-  elements.maxHandicapText.textContent = `+${getHandicapMax(matchState, activeOpponent)}`;
+  setAnimatedText(elements.myShareText, `${matchState.myShare}점`);
+  setAnimatedText(elements.myAmountText, `${mySharePercent}%`);
+  setAnimatedText(elements.handicapText, `+${matchState.handicap}`);
+  setAnimatedText(elements.handicapDeltaText, getHandicapDeltaText(matchState, activeOpponent));
+  setAnimatedText(elements.opponentShareText, `${matchState.opponentShare}점`);
+  setAnimatedText(elements.opponentAmountText, `${opponentSharePercent}%`);
+  setAnimatedText(elements.splitRatioText, `${matchState.myShare} : ${matchState.opponentShare}`);
+  setAnimatedStyle(elements.myShareBar, 'width', nextMyShareBarWidth, 620);
+  setAnimatedStyle(elements.opponentShareBar, 'width', nextOpponentShareBarWidth, 620);
+  setAnimatedText(elements.myCostText, formatWon(myCost));
+  setAnimatedText(elements.opponentCostText, formatWon(opponentCost));
+  setAnimatedText(elements.recordText, `${matchState.wins}승 ${matchState.losses}패`);
+  setAnimatedStyle(elements.handicapMarker, 'left', `${getHandicapPercent(matchState, activeOpponent)}%`, 620, 'is-value-changing');
+  setAnimatedStyle(elements.handicapStartMarker, 'left', `${getStartHandicapPercent(matchState, activeOpponent)}%`, 620);
+  setAnimatedText(elements.minHandicapText, `+${HANDICAP_MIN}`);
+  setAnimatedText(elements.startHandicapText, `시작 +${activeOpponent.initialHandicap}`);
+  setAnimatedText(elements.maxHandicapText, `+${getHandicapMax(matchState, activeOpponent)}`);
   elements.undoButton.disabled = matchState.history.length === 0;
   elements.winButton.disabled = matchState.myShare === 0 && matchState.handicap === HANDICAP_MIN;
   elements.loseButton.disabled = false;
 
+  if (shouldAnimateSplitBar) {
+    restartMotionClass(elements.splitBar, 'is-flowing', 840);
+  }
+
   renderHistory(matchState);
+  hasRendered = true;
 };
 
 const addOpponent = () => {
@@ -476,6 +552,7 @@ const applyResult = (result) => {
 
   saveAppState();
   render();
+  playResultFeedback(result);
 };
 
 const undoLastResult = () => {
