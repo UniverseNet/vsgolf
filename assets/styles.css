@@ -383,6 +383,7 @@ select:focus-visible {
 .metric,
 .split-panel,
 .handicap-panel,
+.settlement-panel,
 .history-panel,
 .control-panel {
   border: 1px solid rgba(255, 255, 255, 0.62);
@@ -394,6 +395,7 @@ select:focus-visible {
 .setup-panel,
 .dashboard,
 .insight-grid,
+.settlement-panel,
 .history-panel {
   animation: panel-rise 560ms var(--ease-out) both;
 }
@@ -414,9 +416,14 @@ select:focus-visible {
   animation-delay: 250ms;
 }
 
+.settlement-panel {
+  animation-delay: 230ms;
+}
+
 .setup-panel,
 .split-panel,
 .handicap-panel,
+.settlement-panel,
 .history-panel {
   padding: 18px;
 }
@@ -425,6 +432,7 @@ select:focus-visible {
 .dashboard,
 .insight-grid,
 .control-panel,
+.settlement-panel,
 .history-panel {
   margin-top: 16px;
 }
@@ -518,6 +526,15 @@ select:focus-visible {
   padding: 0 18px 18px;
 }
 
+.setup-grid--session {
+  grid-template-columns: minmax(180px, 1.2fr) minmax(150px, 0.75fr) minmax(180px, 1fr) minmax(142px, auto);
+  padding-bottom: 12px;
+}
+
+.setup-grid--opponent {
+  padding-top: 0;
+}
+
 .setup-field,
 .dinner-price {
   display: grid;
@@ -570,6 +587,35 @@ select:focus-visible {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.opponent-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 18px 18px;
+}
+
+.opponent-stats__item {
+  display: grid;
+  gap: 4px;
+  min-height: 68px;
+  padding: 12px;
+  border: 1px solid rgba(34, 58, 50, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.opponent-stats__item span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.opponent-stats__item strong {
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 
 .dashboard {
@@ -778,6 +824,33 @@ select:focus-visible {
   pointer-events: none;
 }
 
+.quick-amounts {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.quick-amounts__button {
+  min-height: 36px;
+  border: 1px solid rgba(34, 58, 50, 0.14);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.7);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.quick-amounts__button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(7, 137, 135, 0.28);
+  box-shadow: 0 8px 16px rgba(16, 26, 23, 0.08);
+}
+
 .amount-grid,
 .rule-grid {
   display: grid;
@@ -960,6 +1033,144 @@ select:focus-visible {
   background: linear-gradient(180deg, #fff7f5, #ffe5de);
 }
 
+.settlement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.settlement-actions .button {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.settlement-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.25fr) repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.settlement-card {
+  display: grid;
+  gap: 5px;
+  min-height: 88px;
+  padding: 14px;
+  border: 1px solid rgba(34, 58, 50, 0.11);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.settlement-card span,
+.settlement-card small {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.settlement-card strong {
+  color: var(--text);
+  font-size: 1.18rem;
+  font-weight: 800;
+  line-height: 1.18;
+}
+
+.settlement-card--wide strong {
+  word-break: keep-all;
+}
+
+.settlement-summary {
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid rgba(7, 137, 135, 0.14);
+  border-radius: 8px;
+  color: #1d4841;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: rgba(221, 246, 243, 0.52);
+}
+
+.saved-sessions {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(34, 58, 50, 0.1);
+}
+
+.saved-sessions__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text);
+  font-size: 0.94rem;
+}
+
+.saved-sessions__header span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.saved-session-list {
+  display: grid;
+  gap: 8px;
+  max-height: 210px;
+  margin: 10px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.saved-session-list:empty::before {
+  display: grid;
+  place-items: center;
+  min-height: 54px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.42);
+  content: "저장된 세션이 없습니다";
+}
+
+.saved-session-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid rgba(34, 58, 50, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.saved-session-item__main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.saved-session-item__main strong {
+  overflow: hidden;
+  font-size: 0.94rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-session-item__main span,
+.saved-session-item__amount {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.saved-session-item__amount {
+  color: var(--text);
+  white-space: nowrap;
+}
+
 .history-list {
   display: grid;
   gap: 8px;
@@ -985,7 +1196,7 @@ select:focus-visible {
 
 .history-item {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-columns: 36px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   min-height: 58px;
@@ -1042,10 +1253,39 @@ select:focus-visible {
   white-space: nowrap;
 }
 
+.history-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.history-item__button {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(34, 58, 50, 0.14);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.history-item__button--danger {
+  color: #7a2018;
+  border-color: rgba(211, 95, 77, 0.2);
+  background: rgba(255, 231, 226, 0.62);
+}
+
 @media (max-width: 960px) {
   .setup-grid,
-  .insight-grid {
+  .insight-grid,
+  .settlement-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .settlement-card--wide {
+    grid-column: 1 / -1;
   }
 
   .setup-actions,
@@ -1107,7 +1347,9 @@ select:focus-visible {
   .dashboard,
   .insight-grid,
   .amount-grid,
-  .rule-grid {
+  .rule-grid,
+  .opponent-stats,
+  .settlement-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1117,6 +1359,23 @@ select:focus-visible {
 
   .dinner-price {
     grid-template-columns: 1fr;
+  }
+
+  .quick-amounts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .settlement-actions {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .settlement-actions .button {
+    flex: 1 1 0;
+  }
+
+  .settlement-summary {
+    font-size: 0.84rem;
   }
 
   .control-panel {
@@ -1140,6 +1399,19 @@ select:focus-visible {
     grid-column: 2;
     text-align: left;
     white-space: normal;
+  }
+
+  .history-item__actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .saved-session-item {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-session-item__amount {
+    justify-self: start;
   }
 }
 

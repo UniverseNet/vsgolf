@@ -5,6 +5,9 @@ const HANDICAP_INPUT_MAX = 99;
 const HANDICAP_BASE_MAX = 20;
 const SHARE_TOTAL = 10;
 const STORAGE_KEY = 'vsgolf:dinner-bet-history';
+const DEFAULT_SESSION_TITLE = '오늘 경기';
+const DEFAULT_DINNER_PRICE = 100000;
+const MAX_SAVED_SESSIONS = 8;
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -13,6 +16,29 @@ const currencyFormatter = new Intl.NumberFormat('ko-KR', {
 });
 
 const createOpponentId = () => `opponent-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const createSessionId = () => `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const getTodayDateValue = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const date = String(today.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${date}`;
+};
+
+const normalizeSessionTitle = (title) => normalizeOpponentName(title, DEFAULT_SESSION_TITLE);
+
+const normalizeDinnerPrice = (price) => {
+  const numericPrice = Number(price);
+
+  if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+    return DEFAULT_DINNER_PRICE;
+  }
+
+  return Math.round(numericPrice);
+};
 
 const normalizeHandicap = (handicap) => {
   const numericHandicap = Number(handicap);
@@ -65,6 +91,55 @@ const createOpponent = ({ id = createOpponentId(), name, initialHandicap, histor
   history: normalizeStoredHistory(history),
 });
 
+const createDefaultSession = () => ({
+  id: createSessionId(),
+  title: DEFAULT_SESSION_TITLE,
+  date: getTodayDateValue(),
+  location: '',
+  dinnerPrice: DEFAULT_DINNER_PRICE,
+});
+
+const normalizeStoredSession = (session) => {
+  if (!session || typeof session !== 'object') {
+    return createDefaultSession();
+  }
+
+  return {
+    id: typeof session.id === 'string' && session.id ? session.id : createSessionId(),
+    title: normalizeSessionTitle(session.title),
+    date: typeof session.date === 'string' && session.date ? session.date : getTodayDateValue(),
+    location: typeof session.location === 'string' ? session.location.trim() : '',
+    dinnerPrice: normalizeDinnerPrice(session.dinnerPrice),
+  };
+};
+
+const normalizeSavedSessions = (savedSessions) => {
+  if (!Array.isArray(savedSessions)) {
+    return [];
+  }
+
+  return savedSessions
+    .filter((session) => session && typeof session === 'object')
+    .slice(0, MAX_SAVED_SESSIONS)
+    .map((session) => ({
+      id: typeof session.id === 'string' && session.id ? session.id : createSessionId(),
+      title: normalizeSessionTitle(session.title),
+      date: typeof session.date === 'string' && session.date ? session.date : getTodayDateValue(),
+      location: typeof session.location === 'string' ? session.location.trim() : '',
+      opponentId: typeof session.opponentId === 'string' ? session.opponentId : '',
+      opponentName: normalizeOpponentName(session.opponentName),
+      dinnerPrice: normalizeDinnerPrice(session.dinnerPrice),
+      myShare: clamp(Number(session.myShare) || 0, 0, SHARE_TOTAL),
+      opponentShare: clamp(Number(session.opponentShare) || SHARE_TOTAL, 0, SHARE_TOTAL),
+      handicap: Math.max(HANDICAP_MIN, Math.round(Number(session.handicap) || DEFAULT_INITIAL_HANDICAP)),
+      initialHandicap: normalizeHandicap(session.initialHandicap),
+      wins: Math.max(0, Math.round(Number(session.wins) || 0)),
+      losses: Math.max(0, Math.round(Number(session.losses) || 0)),
+      historyLength: Math.max(0, Math.round(Number(session.historyLength) || 0)),
+      savedAt: typeof session.savedAt === 'string' && session.savedAt ? session.savedAt : new Date().toISOString(),
+    }));
+};
+
 const createDefaultAppState = (history = []) => {
   const opponent = createOpponent({
     name: DEFAULT_OPPONENT_NAME,
@@ -75,6 +150,8 @@ const createDefaultAppState = (history = []) => {
   return {
     activeOpponentId: opponent.id,
     opponents: [opponent],
+    currentSession: createDefaultSession(),
+    savedSessions: [],
   };
 };
 
@@ -115,6 +192,25 @@ const normalizeStoredAppState = (storedValue) => {
     return {
       activeOpponentId: activeOpponent.id,
       opponents,
+      currentSession: createDefaultSession(),
+      savedSessions: [],
+    };
+  }
+
+  if (parsedValue?.version === 3) {
+    const opponents = normalizeStoredOpponents(parsedValue.opponents);
+
+    if (opponents.length === 0) {
+      return createDefaultAppState();
+    }
+
+    const activeOpponent = opponents.find((opponent) => opponent.id === parsedValue.activeOpponentId) ?? opponents[0];
+
+    return {
+      activeOpponentId: activeOpponent.id,
+      opponents,
+      currentSession: normalizeStoredSession(parsedValue.currentSession),
+      savedSessions: normalizeSavedSessions(parsedValue.savedSessions),
     };
   }
 
@@ -141,6 +237,7 @@ const loadStoredAppState = () => {
 
 let appState = loadStoredAppState();
 let pendingDeleteOpponentId = null;
+let pendingNewSession = false;
 
 const elements = {
   board: document.querySelector('.bet-board'),
@@ -149,6 +246,10 @@ const elements = {
   opponentCountText: document.querySelector('#opponentCountText'),
   saveStatusText: document.querySelector('#saveStatusText'),
   setupSummaryText: document.querySelector('#setupSummaryText'),
+  sessionTitleInput: document.querySelector('#sessionTitleInput'),
+  sessionDateInput: document.querySelector('#sessionDateInput'),
+  sessionLocationInput: document.querySelector('#sessionLocationInput'),
+  newSessionButton: document.querySelector('#newSessionButton'),
   opponentSelect: document.querySelector('#opponentSelect'),
   opponentNameInput: document.querySelector('#opponentNameInput'),
   addOpponentButton: document.querySelector('#addOpponentButton'),
@@ -173,10 +274,25 @@ const elements = {
   minHandicapText: document.querySelector('#minHandicapText'),
   startHandicapText: document.querySelector('#startHandicapText'),
   maxHandicapText: document.querySelector('#maxHandicapText'),
+  totalRecordText: document.querySelector('#totalRecordText'),
+  averageShareText: document.querySelector('#averageShareText'),
+  recommendedHandicapText: document.querySelector('#recommendedHandicapText'),
   winButton: document.querySelector('#winButton'),
   loseButton: document.querySelector('#loseButton'),
   undoButton: document.querySelector('#undoButton'),
   resetButton: document.querySelector('#resetButton'),
+  quickAmountButtons: document.querySelectorAll('[data-amount-delta], [data-amount-value]'),
+  copySummaryButton: document.querySelector('#copySummaryButton'),
+  saveSessionButton: document.querySelector('#saveSessionButton'),
+  settlementSessionTitleText: document.querySelector('#settlementSessionTitleText'),
+  settlementSessionMetaText: document.querySelector('#settlementSessionMetaText'),
+  finalSplitText: document.querySelector('#finalSplitText'),
+  mySettlementText: document.querySelector('#mySettlementText'),
+  opponentSettlementText: document.querySelector('#opponentSettlementText'),
+  finalHandicapText: document.querySelector('#finalHandicapText'),
+  settlementSummaryText: document.querySelector('#settlementSummaryText'),
+  savedSessionCountText: document.querySelector('#savedSessionCountText'),
+  savedSessionList: document.querySelector('#savedSessionList'),
   historyList: document.querySelector('#historyList'),
 };
 
@@ -279,8 +395,13 @@ const saveAppState = () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        version: 2,
+        version: 3,
         activeOpponentId: appState.activeOpponentId,
+        currentSession: {
+          ...appState.currentSession,
+          dinnerPrice: getDinnerPrice(),
+        },
+        savedSessions: appState.savedSessions,
         opponents: appState.opponents.map((opponent) => ({
           id: opponent.id,
           name: opponent.name,
@@ -323,6 +444,10 @@ const syncDinnerPriceInput = () => {
   elements.dinnerPriceInput.value = formatPriceInput(elements.dinnerPriceInput.value);
 };
 
+const setDinnerPriceValue = (price) => {
+  elements.dinnerPriceInput.value = formatPriceInput(normalizeDinnerPrice(price));
+};
+
 const getDinnerPrice = () => {
   const numericText = getNumericInputText(elements.dinnerPriceInput.value);
   const inputValue = Number(numericText);
@@ -335,6 +460,35 @@ const getDinnerPrice = () => {
 };
 
 const formatWon = (amount) => `${currencyFormatter.format(amount)}원`;
+
+const formatDateText = (dateValue) => {
+  if (!dateValue) {
+    return '날짜 미입력';
+  }
+
+  const [year, month, date] = dateValue.split('-');
+
+  if (!year || !month || !date) {
+    return dateValue;
+  }
+
+  return `${year}.${month}.${date}`;
+};
+
+const getSessionMetaText = (session) => [formatDateText(session.date), session.location || '장소 미입력'].join(' · ');
+
+const updateCurrentSession = (updates) => {
+  appState = {
+    ...appState,
+    currentSession: {
+      ...appState.currentSession,
+      ...updates,
+    },
+  };
+};
+
+const buildSettlementSummary = ({ activeOpponent, matchState, dinnerPrice, myCost, opponentCost }) =>
+  `저녁내기 결과: ${appState.currentSession.title} / ${activeOpponent.name} / ${matchState.wins}승 ${matchState.losses}패 / 최종 ${matchState.myShare}:${matchState.opponentShare} / ${formatWon(dinnerPrice)} 기준 나 ${formatWon(myCost)}, 상대 ${formatWon(opponentCost)} / 최종 핸디 +${matchState.handicap}`;
 
 const getHandicapMax = (matchState, activeOpponent) =>
   Math.max(HANDICAP_BASE_MAX, matchState.handicap + 2, activeOpponent.initialHandicap + 2);
@@ -361,6 +515,48 @@ const getHandicapDeltaText = (matchState, activeOpponent) => {
 
   return delta > 0 ? `시작보다 +${delta}` : `시작보다 ${delta}`;
 };
+
+const getOpponentStats = (activeOpponent, matchState) => {
+  const savedOpponentSessions = appState.savedSessions.filter(
+    (session) => session.opponentId === activeOpponent.id || session.opponentName === activeOpponent.name,
+  );
+  const sessionShares = savedOpponentSessions.map((session) => session.myShare);
+  const currentSessionShare = matchState.history.length > 0 ? matchState.myShare : 5;
+  const totalWins = savedOpponentSessions.reduce((total, session) => total + session.wins, matchState.wins);
+  const totalLosses = savedOpponentSessions.reduce((total, session) => total + session.losses, matchState.losses);
+  const shareSamples = [...sessionShares, currentSessionShare];
+  const averageShare = shareSamples.reduce((total, share) => total + share, 0) / shareSamples.length;
+  const recommendedHandicap = clamp(
+    activeOpponent.initialHandicap + Math.round((totalLosses - totalWins) / 3),
+    HANDICAP_MIN,
+    HANDICAP_INPUT_MAX,
+  );
+
+  return {
+    averageShare,
+    recommendedHandicap,
+    totalLosses,
+    totalWins,
+  };
+};
+
+const createSavedSessionSnapshot = ({ activeOpponent, matchState, dinnerPrice }) => ({
+  id: createSessionId(),
+  title: normalizeSessionTitle(appState.currentSession.title),
+  date: appState.currentSession.date || getTodayDateValue(),
+  location: appState.currentSession.location || '',
+  opponentId: activeOpponent.id,
+  opponentName: activeOpponent.name,
+  dinnerPrice,
+  myShare: matchState.myShare,
+  opponentShare: matchState.opponentShare,
+  handicap: matchState.handicap,
+  initialHandicap: activeOpponent.initialHandicap,
+  wins: matchState.wins,
+  losses: matchState.losses,
+  historyLength: matchState.history.length,
+  savedAt: new Date().toISOString(),
+});
 
 const createHistoryItem = (entry, isLatest = false) => {
   const listItem = document.createElement('li');
@@ -389,8 +585,26 @@ const createHistoryItem = (entry, isLatest = false) => {
   stateText.className = 'history-item__state';
   stateText.textContent = `${entry.myShare} : ${entry.opponentShare} · 핸디 +${entry.handicap}`;
 
+  const actions = document.createElement('div');
+  actions.className = 'history-item__actions';
+
+  const toggleButton = document.createElement('button');
+  toggleButton.className = 'history-item__button';
+  toggleButton.type = 'button';
+  toggleButton.dataset.historyAction = 'toggle';
+  toggleButton.dataset.round = String(entry.round);
+  toggleButton.textContent = entry.result === 'win' ? '패배로 변경' : '승리로 변경';
+
+  const deleteButton = document.createElement('button');
+  deleteButton.className = 'history-item__button history-item__button--danger';
+  deleteButton.type = 'button';
+  deleteButton.dataset.historyAction = 'delete';
+  deleteButton.dataset.round = String(entry.round);
+  deleteButton.textContent = '삭제';
+
+  actions.append(toggleButton, deleteButton);
   main.append(result, detail);
-  listItem.append(round, main, stateText);
+  listItem.append(round, main, stateText, actions);
 
   return listItem;
 };
@@ -407,6 +621,38 @@ const renderOpponentOptions = () => {
     option.selected = opponent.id === appState.activeOpponentId;
 
     elements.opponentSelect.append(option);
+  });
+};
+
+const createSavedSessionItem = (session) => {
+  const listItem = document.createElement('li');
+  listItem.className = 'saved-session-item';
+
+  const main = document.createElement('div');
+  main.className = 'saved-session-item__main';
+
+  const title = document.createElement('strong');
+  title.textContent = `${session.title} · ${session.opponentName}`;
+
+  const detail = document.createElement('span');
+  detail.textContent = `${formatDateText(session.date)} · ${session.wins}승 ${session.losses}패 · ${session.myShare}:${session.opponentShare}`;
+
+  const amount = document.createElement('span');
+  amount.className = 'saved-session-item__amount';
+  amount.textContent = formatWon(session.dinnerPrice);
+
+  main.append(title, detail);
+  listItem.append(main, amount);
+
+  return listItem;
+};
+
+const renderSavedSessions = () => {
+  elements.savedSessionList.replaceChildren();
+  setAnimatedText(elements.savedSessionCountText, `${appState.savedSessions.length}개`);
+
+  appState.savedSessions.forEach((session) => {
+    elements.savedSessionList.append(createSavedSessionItem(session));
   });
 };
 
@@ -435,9 +681,34 @@ const render = () => {
   const nextOpponentShareBarWidth = `${opponentSharePercent}%`;
   const shouldAnimateSplitBar =
     hasRendered && elements.myShareBar.style.width && elements.myShareBar.style.width !== nextMyShareBarWidth;
+
+  if (document.activeElement !== elements.sessionTitleInput) {
+    elements.sessionTitleInput.value = appState.currentSession.title;
+  }
+
+  if (document.activeElement !== elements.sessionDateInput) {
+    elements.sessionDateInput.value = appState.currentSession.date;
+  }
+
+  if (document.activeElement !== elements.sessionLocationInput) {
+    elements.sessionLocationInput.value = appState.currentSession.location;
+  }
+
+  if (document.activeElement !== elements.dinnerPriceInput) {
+    setDinnerPriceValue(appState.currentSession.dinnerPrice);
+  }
+
   const dinnerPrice = getDinnerPrice();
   const myCost = dinnerPrice * (matchState.myShare / SHARE_TOTAL);
   const opponentCost = dinnerPrice * (matchState.opponentShare / SHARE_TOTAL);
+  const opponentStats = getOpponentStats(activeOpponent, matchState);
+  const settlementSummary = buildSettlementSummary({
+    activeOpponent,
+    dinnerPrice,
+    matchState,
+    myCost,
+    opponentCost,
+  });
 
   renderOpponentOptions();
 
@@ -448,11 +719,15 @@ const render = () => {
     elements.setupSummaryText,
     `${activeOpponent.name} · 시작 +${activeOpponent.initialHandicap} · ${matchState.wins}승 ${matchState.losses}패`,
   );
+  setAnimatedText(elements.totalRecordText, `${opponentStats.totalWins}승 ${opponentStats.totalLosses}패`);
+  setAnimatedText(elements.averageShareText, `${opponentStats.averageShare.toFixed(1)}점`);
+  setAnimatedText(elements.recommendedHandicapText, `+${opponentStats.recommendedHandicap}`);
   elements.opponentSelect.value = activeOpponent.id;
   elements.startHandicapInput.value = String(activeOpponent.initialHandicap);
   elements.deleteOpponentButton.disabled = appState.opponents.length <= 1;
   elements.deleteOpponentButton.textContent =
     pendingDeleteOpponentId === activeOpponent.id ? '삭제 확인' : '상대 삭제';
+  elements.newSessionButton.textContent = pendingNewSession ? '새 경기 확인' : '새 경기 시작';
   setAnimatedText(elements.myShareText, `${matchState.myShare}점`);
   setAnimatedText(elements.myAmountText, `${mySharePercent}%`);
   setAnimatedText(elements.handicapText, `+${matchState.handicap}`);
@@ -470,6 +745,13 @@ const render = () => {
   setAnimatedText(elements.minHandicapText, `+${HANDICAP_MIN}`);
   setAnimatedText(elements.startHandicapText, `시작 +${activeOpponent.initialHandicap}`);
   setAnimatedText(elements.maxHandicapText, `+${getHandicapMax(matchState, activeOpponent)}`);
+  setAnimatedText(elements.settlementSessionTitleText, appState.currentSession.title);
+  setAnimatedText(elements.settlementSessionMetaText, getSessionMetaText(appState.currentSession));
+  setAnimatedText(elements.finalSplitText, `${matchState.myShare} : ${matchState.opponentShare}`);
+  setAnimatedText(elements.mySettlementText, formatWon(myCost));
+  setAnimatedText(elements.opponentSettlementText, formatWon(opponentCost));
+  setAnimatedText(elements.finalHandicapText, `+${matchState.handicap}`);
+  elements.settlementSummaryText.textContent = settlementSummary;
   elements.undoButton.disabled = matchState.history.length === 0;
   elements.winButton.disabled = matchState.myShare === 0 && matchState.handicap === HANDICAP_MIN;
   elements.loseButton.disabled = false;
@@ -479,6 +761,7 @@ const render = () => {
   }
 
   renderHistory(matchState);
+  renderSavedSessions();
   hasRendered = true;
 };
 
@@ -495,6 +778,7 @@ const addOpponent = () => {
   };
 
   pendingDeleteOpponentId = null;
+  pendingNewSession = false;
   elements.opponentNameInput.value = '';
   saveAppState();
   render();
@@ -509,6 +793,7 @@ const deleteActiveOpponent = () => {
 
   if (pendingDeleteOpponentId !== activeOpponent.id) {
     pendingDeleteOpponentId = activeOpponent.id;
+    pendingNewSession = false;
     render();
 
     return;
@@ -522,6 +807,7 @@ const deleteActiveOpponent = () => {
   };
 
   pendingDeleteOpponentId = null;
+  pendingNewSession = false;
   saveAppState();
   render();
 };
@@ -534,6 +820,7 @@ const updateStartHandicap = () => {
   const nextInitialHandicap = normalizeHandicap(elements.startHandicapInput.value);
 
   pendingDeleteOpponentId = null;
+  pendingNewSession = false;
   updateActiveOpponent((opponent) => ({
     ...opponent,
     initialHandicap: nextInitialHandicap,
@@ -555,12 +842,14 @@ const switchOpponent = () => {
   };
 
   pendingDeleteOpponentId = null;
+  pendingNewSession = false;
   saveAppState();
   render();
 };
 
 const applyResult = (result) => {
   pendingDeleteOpponentId = null;
+  pendingNewSession = false;
   updateActiveOpponent((opponent) => ({
     ...opponent,
     history: [
@@ -579,6 +868,7 @@ const applyResult = (result) => {
 
 const undoLastResult = () => {
   pendingDeleteOpponentId = null;
+  pendingNewSession = false;
   updateActiveOpponent((opponent) => ({
     ...opponent,
     history: opponent.history.slice(0, -1),
@@ -590,17 +880,171 @@ const undoLastResult = () => {
 
 const resetBoard = () => {
   pendingDeleteOpponentId = null;
+  pendingNewSession = false;
   updateActiveOpponent((opponent) => ({
     ...opponent,
     history: [],
   }));
 
-  elements.dinnerPriceInput.value = formatPriceInput('100000');
+  updateCurrentSession({
+    dinnerPrice: DEFAULT_DINNER_PRICE,
+  });
+  setDinnerPriceValue(DEFAULT_DINNER_PRICE);
   saveAppState();
   render();
 };
 
+const updateSessionTitle = () => {
+  pendingDeleteOpponentId = null;
+  pendingNewSession = false;
+  updateCurrentSession({
+    title: normalizeSessionTitle(elements.sessionTitleInput.value),
+  });
+  saveAppState();
+  render();
+};
+
+const updateSessionDate = () => {
+  pendingDeleteOpponentId = null;
+  pendingNewSession = false;
+  updateCurrentSession({
+    date: elements.sessionDateInput.value || getTodayDateValue(),
+  });
+  saveAppState();
+  render();
+};
+
+const updateSessionLocation = () => {
+  pendingDeleteOpponentId = null;
+  pendingNewSession = false;
+  updateCurrentSession({
+    location: elements.sessionLocationInput.value.trim(),
+  });
+  saveAppState();
+  render();
+};
+
+const updateDinnerPrice = () => {
+  syncDinnerPriceInput();
+  updateCurrentSession({
+    dinnerPrice: getDinnerPrice(),
+  });
+  saveAppState();
+  render();
+};
+
+const setQuickDinnerPrice = (price) => {
+  pendingDeleteOpponentId = null;
+  pendingNewSession = false;
+  const nextDinnerPrice = normalizeDinnerPrice(price);
+
+  updateCurrentSession({
+    dinnerPrice: nextDinnerPrice,
+  });
+  setDinnerPriceValue(nextDinnerPrice);
+  saveAppState();
+  render();
+};
+
+const adjustDinnerPrice = (amount) => {
+  const nextDinnerPrice = Math.max(0, getDinnerPrice() + amount);
+
+  setQuickDinnerPrice(nextDinnerPrice);
+};
+
+const startNewSession = () => {
+  const activeOpponent = getActiveOpponent();
+
+  if (activeOpponent.history.length > 0 && !pendingNewSession) {
+    pendingDeleteOpponentId = null;
+    pendingNewSession = true;
+    render();
+
+    return;
+  }
+
+  pendingDeleteOpponentId = null;
+  pendingNewSession = false;
+  updateActiveOpponent((opponent) => ({
+    ...opponent,
+    history: [],
+  }));
+  updateCurrentSession(createDefaultSession());
+  setDinnerPriceValue(DEFAULT_DINNER_PRICE);
+  saveAppState();
+  render();
+};
+
+const saveCurrentSession = () => {
+  const activeOpponent = getActiveOpponent();
+  const matchState = buildMatchState(activeOpponent);
+  const snapshot = createSavedSessionSnapshot({
+    activeOpponent,
+    dinnerPrice: getDinnerPrice(),
+    matchState,
+  });
+
+  pendingDeleteOpponentId = null;
+  pendingNewSession = false;
+  appState = {
+    ...appState,
+    savedSessions: [snapshot, ...appState.savedSessions].slice(0, MAX_SAVED_SESSIONS),
+  };
+  saveAppState();
+  setAnimatedText(elements.saveStatusText, '세션 저장됨');
+  render();
+};
+
+const copySettlementSummary = async () => {
+  const summaryText = elements.settlementSummaryText.textContent;
+
+  pendingDeleteOpponentId = null;
+  pendingNewSession = false;
+
+  try {
+    await navigator.clipboard.writeText(summaryText);
+    setAnimatedText(elements.saveStatusText, '요약 복사됨');
+  } catch (error) {
+    console.warn('정산 요약을 복사하지 못했습니다.', error);
+    setAnimatedText(elements.saveStatusText, '복사 실패');
+  }
+
+  render();
+};
+
+const updateHistoryByRound = (round, updater) => {
+  pendingDeleteOpponentId = null;
+  pendingNewSession = false;
+  updateActiveOpponent((opponent) => ({
+    ...opponent,
+    history: normalizeStoredHistory(updater(opponent.history, round)),
+  }));
+  saveAppState();
+  render();
+};
+
+const toggleHistoryResult = (round) => {
+  updateHistoryByRound(round, (history) =>
+    history.map((entry, index) =>
+      index + 1 === round
+        ? {
+            ...entry,
+            result: entry.result === 'win' ? 'lose' : 'win',
+          }
+        : entry,
+    ),
+  );
+};
+
+const deleteHistoryResult = (round) => {
+  updateHistoryByRound(round, (history) => history.filter((_, index) => index + 1 !== round));
+};
+
 elements.opponentSelect.addEventListener('change', switchOpponent);
+elements.sessionTitleInput.addEventListener('change', updateSessionTitle);
+elements.sessionDateInput.addEventListener('change', updateSessionDate);
+elements.sessionLocationInput.addEventListener('change', updateSessionLocation);
+elements.newSessionButton.addEventListener('click', startNewSession);
 elements.opponentNameInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
     addOpponent();
@@ -613,11 +1057,47 @@ elements.winButton.addEventListener('click', () => applyResult('win'));
 elements.loseButton.addEventListener('click', () => applyResult('lose'));
 elements.undoButton.addEventListener('click', undoLastResult);
 elements.resetButton.addEventListener('click', resetBoard);
-elements.dinnerPriceInput.addEventListener('input', () => {
-  syncDinnerPriceInput();
-  render();
-});
+elements.quickAmountButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    if (button.dataset.amountValue) {
+      setQuickDinnerPrice(Number(button.dataset.amountValue));
 
-syncDinnerPriceInput();
+      return;
+    }
+
+    adjustDinnerPrice(Number(button.dataset.amountDelta) || 0);
+  });
+});
+elements.copySummaryButton.addEventListener('click', copySettlementSummary);
+elements.saveSessionButton.addEventListener('click', saveCurrentSession);
+elements.historyList.addEventListener('click', (event) => {
+  const actionButton = event.target.closest('[data-history-action]');
+
+  if (!actionButton) {
+    return;
+  }
+
+  const round = Number(actionButton.dataset.round);
+
+  if (!Number.isInteger(round)) {
+    return;
+  }
+
+  if (actionButton.dataset.historyAction === 'toggle') {
+    toggleHistoryResult(round);
+
+    return;
+  }
+
+  if (actionButton.dataset.historyAction === 'delete') {
+    deleteHistoryResult(round);
+  }
+});
+elements.dinnerPriceInput.addEventListener('input', updateDinnerPrice);
+
+elements.sessionTitleInput.value = appState.currentSession.title;
+elements.sessionDateInput.value = appState.currentSession.date;
+elements.sessionLocationInput.value = appState.currentSession.location;
+setDinnerPriceValue(appState.currentSession.dinnerPrice);
 saveAppState();
 render();
