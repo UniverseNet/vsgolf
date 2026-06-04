@@ -26,13 +26,14 @@
         </div>
       </header>
 
-      <section class="setup-panel" aria-label="상대와 시작 핸디 설정">
-        <div class="section-heading">
+      <details class="setup-panel" aria-label="상대와 시작 핸디 설정">
+        <summary class="setup-summary">
           <div>
             <p class="section-heading__eyebrow">Setup</p>
             <h2>상대 설정</h2>
           </div>
-        </div>
+          <output class="setup-summary__status" id="setupSummaryText">상대 · 시작 +10</output>
+        </summary>
 
         <div class="setup-grid">
           <label class="setup-field" for="opponentSelect">
@@ -59,7 +60,7 @@
             <input id="startHandicapInput" type="number" min="0" max="99" step="1" value="10" inputmode="numeric" />
           </label>
         </div>
-      </section>
+      </details>
 
       <section class="dashboard" aria-label="현재 내기 상태">
         <article class="metric metric--mine">
@@ -79,6 +80,21 @@
           <strong class="metric__value" id="opponentShareText">5점</strong>
           <span class="metric__sub-value" id="opponentAmountText">50%</span>
         </article>
+      </section>
+
+      <section class="control-panel" aria-label="내기 결과 입력">
+        <button class="result-button result-button--win" type="button" id="winButton">
+          승리 입력
+        </button>
+        <button class="result-button result-button--lose" type="button" id="loseButton">
+          패배 입력
+        </button>
+        <button class="button button--neutral" type="button" id="undoButton" disabled>
+          되돌리기
+        </button>
+        <button class="button button--neutral" type="button" id="resetButton">
+          초기화
+        </button>
       </section>
 
       <div class="insight-grid">
@@ -103,7 +119,10 @@
 
           <label class="dinner-price" for="dinnerPriceInput">
             <span>예상 저녁값</span>
-            <input id="dinnerPriceInput" type="number" min="0" step="1000" value="100000" inputmode="numeric" />
+            <span class="price-input">
+              <input id="dinnerPriceInput" type="text" value="100,000" inputmode="numeric" autocomplete="off" />
+              <span class="price-input__unit" aria-hidden="true">원</span>
+            </span>
           </label>
 
           <div class="amount-grid" aria-label="예상 결제 금액">
@@ -151,21 +170,6 @@
           </div>
         </section>
       </div>
-
-      <section class="control-panel" aria-label="내기 결과 입력">
-        <button class="result-button result-button--win" type="button" id="winButton">
-          승리 입력
-        </button>
-        <button class="result-button result-button--lose" type="button" id="loseButton">
-          패배 입력
-        </button>
-        <button class="button button--neutral" type="button" id="undoButton" disabled>
-          되돌리기
-        </button>
-        <button class="button button--neutral" type="button" id="resetButton">
-          초기화
-        </button>
-      </section>
 
       <section class="history-panel" aria-label="진행 기록">
         <div class="section-heading">

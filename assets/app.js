@@ -148,6 +148,7 @@ const elements = {
   activeOpponentText: document.querySelector('#activeOpponentText'),
   opponentCountText: document.querySelector('#opponentCountText'),
   saveStatusText: document.querySelector('#saveStatusText'),
+  setupSummaryText: document.querySelector('#setupSummaryText'),
   opponentSelect: document.querySelector('#opponentSelect'),
   opponentNameInput: document.querySelector('#opponentNameInput'),
   addOpponentButton: document.querySelector('#addOpponentButton'),
@@ -306,10 +307,27 @@ const updateActiveOpponent = (updater) => {
   };
 };
 
-const getDinnerPrice = () => {
-  const inputValue = Number(elements.dinnerPriceInput.value);
+const getNumericInputText = (value) => String(value).replace(/\D/g, '');
 
-  if (!Number.isFinite(inputValue) || inputValue < 0) {
+const formatPriceInput = (value) => {
+  const numericText = getNumericInputText(value);
+
+  if (!numericText) {
+    return '';
+  }
+
+  return currencyFormatter.format(Number(numericText));
+};
+
+const syncDinnerPriceInput = () => {
+  elements.dinnerPriceInput.value = formatPriceInput(elements.dinnerPriceInput.value);
+};
+
+const getDinnerPrice = () => {
+  const numericText = getNumericInputText(elements.dinnerPriceInput.value);
+  const inputValue = Number(numericText);
+
+  if (!numericText || !Number.isFinite(inputValue) || inputValue < 0) {
     return 0;
   }
 
@@ -426,6 +444,10 @@ const render = () => {
   setAnimatedText(elements.roundSummary, `${activeOpponent.name} · ${matchState.history.length + 1}번째 내기 기준`);
   setAnimatedText(elements.activeOpponentText, activeOpponent.name);
   setAnimatedText(elements.opponentCountText, `상대 ${appState.opponents.length}명`);
+  setAnimatedText(
+    elements.setupSummaryText,
+    `${activeOpponent.name} · 시작 +${activeOpponent.initialHandicap} · ${matchState.wins}승 ${matchState.losses}패`,
+  );
   elements.opponentSelect.value = activeOpponent.id;
   elements.startHandicapInput.value = String(activeOpponent.initialHandicap);
   elements.deleteOpponentButton.disabled = appState.opponents.length <= 1;
@@ -573,7 +595,7 @@ const resetBoard = () => {
     history: [],
   }));
 
-  elements.dinnerPriceInput.value = '100000';
+  elements.dinnerPriceInput.value = formatPriceInput('100000');
   saveAppState();
   render();
 };
@@ -591,7 +613,11 @@ elements.winButton.addEventListener('click', () => applyResult('win'));
 elements.loseButton.addEventListener('click', () => applyResult('lose'));
 elements.undoButton.addEventListener('click', undoLastResult);
 elements.resetButton.addEventListener('click', resetBoard);
-elements.dinnerPriceInput.addEventListener('input', render);
+elements.dinnerPriceInput.addEventListener('input', () => {
+  syncDinnerPriceInput();
+  render();
+});
 
+syncDinnerPriceInput();
 saveAppState();
 render();
