@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+*.local
+
+# Certificates
+certs/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Auto-generated files
+auto-imports.d.ts
+components.d.ts
+
+# Bundle analyzer
+stats.html
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# System files
+.DS_Store
+Thumbs.db
+
+# GitHub
+.github/
+
+# Public assets (APK files, etc.)
+public/contract/*.apk
+dist/contract/*.apk
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+

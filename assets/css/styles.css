@@ -527,7 +527,7 @@ select:focus-visible {
 }
 
 .setup-grid--session {
-  grid-template-columns: minmax(180px, 1.2fr) minmax(150px, 0.75fr) minmax(180px, 1fr) minmax(142px, auto);
+  grid-template-columns: minmax(180px, 1.2fr) minmax(150px, 0.75fr) minmax(142px, auto);
   padding-bottom: 12px;
 }
 
@@ -1277,6 +1277,352 @@ select:focus-visible {
   background: rgba(255, 231, 226, 0.62);
 }
 
+.setup-grid--participant {
+  grid-template-columns: minmax(180px, 1fr) minmax(140px, 0.45fr) minmax(142px, auto);
+}
+
+.participant-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  padding: 0 18px 18px;
+}
+
+.participant-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  min-height: 104px;
+  overflow: hidden;
+  padding: 14px;
+  border: 1px solid rgba(34, 58, 50, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.participant-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(180deg, var(--participant-color-start), var(--participant-color-end));
+  content: "";
+}
+
+.participant-card__main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.participant-card__main strong,
+.participant-card__cost {
+  color: var(--text);
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+
+.participant-card__main span,
+.participant-card__share {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.participant-card__cost {
+  align-self: start;
+  white-space: nowrap;
+}
+
+.participant-card__delete {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(211, 95, 77, 0.18);
+  border-radius: 8px;
+  color: #7a2018;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: rgba(255, 231, 226, 0.62);
+}
+
+.control-panel {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "composer actions"
+    "course course"
+    "scores scores";
+  align-items: start;
+}
+
+.round-course-field {
+  grid-area: course;
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.round-course-field__optional {
+  color: var(--teal);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.round-course-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.round-composer {
+  grid-area: composer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.round-composer h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.08rem;
+  line-height: 1.2;
+}
+
+.round-composer__eyebrow {
+  margin: 0 0 4px;
+  color: var(--teal);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.round-composer__preview {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 11px;
+  border: 1px solid rgba(7, 137, 135, 0.18);
+  border-radius: 8px;
+  color: #17443d;
+  font-size: 0.9rem;
+  font-weight: 800;
+  background: rgba(221, 246, 243, 0.78);
+  white-space: nowrap;
+}
+
+.control-actions {
+  grid-area: actions;
+  display: grid;
+  grid-template-columns: minmax(92px, 1fr) minmax(92px, 1fr) minmax(92px, 1fr);
+  gap: 8px;
+  justify-self: end;
+  width: min(100%, 380px);
+}
+
+.score-entry-panel {
+  grid-area: scores;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.score-entry-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.score-entry-panel__header strong {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.score-entry-panel__header span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.score-input-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.score-input-item {
+  display: grid;
+  gap: 4px;
+  min-height: 92px;
+  padding: 12px;
+  border: 1px solid rgba(34, 58, 50, 0.13);
+  border-radius: 8px;
+  color: var(--text);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms var(--ease-out);
+}
+
+.score-input-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(7, 137, 135, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 10px 20px rgba(16, 26, 23, 0.09);
+}
+
+.score-input-item strong {
+  overflow: hidden;
+  font-size: 0.98rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-input-item span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.score-input-item input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid rgba(34, 58, 50, 0.16);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 1.06rem;
+  font-weight: 800;
+  text-align: right;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.split-bar__segment {
+  display: block;
+  min-width: 4px;
+  transition: width 560ms var(--ease-out);
+}
+
+.split-bar.is-flowing .split-bar__segment {
+  animation: bar-flow 820ms linear;
+}
+
+.amount-grid--participants,
+.settlement-participants {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.handicap-list {
+  display: grid;
+  gap: 10px;
+}
+
+.handicap-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(34, 58, 50, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.handicap-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.handicap-item__header strong,
+.handicap-item__header span {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.handicap-item__track {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(16, 26, 23, 0.12);
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0 1px, transparent 1px 42px),
+    linear-gradient(90deg, var(--teal) 0%, var(--brass) 52%, var(--coral) 100%);
+}
+
+.handicap-item__marker {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(16, 26, 23, 0.2);
+  transform: translate(-50%, -50%);
+  transition: left 560ms var(--ease-out);
+}
+
+.handicap-item__delta {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.settlement-participants {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.settlement-participant {
+  display: grid;
+  gap: 5px;
+  min-height: 84px;
+  padding: 13px;
+  border: 1px solid rgba(34, 58, 50, 0.11);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.settlement-participant span,
+.settlement-participant small {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.settlement-participant strong {
+  color: var(--text);
+  font-size: 1.16rem;
+  font-weight: 800;
+}
+
+.bet-board.is-round-feedback .dashboard,
+.bet-board.is-round-feedback .split-panel {
+  animation: outcome-win 520ms ease;
+}
+
 @media (max-width: 960px) {
   .setup-grid,
   .insight-grid,
@@ -1296,6 +1642,21 @@ select:focus-visible {
   .split-panel,
   .handicap-panel {
     min-width: 0;
+  }
+
+  .control-panel {
+    position: static;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "composer"
+      "course"
+      "scores"
+      "actions";
+  }
+
+  .control-actions {
+    justify-self: stretch;
+    width: 100%;
   }
 }
 
@@ -1378,9 +1739,27 @@ select:focus-visible {
     font-size: 0.84rem;
   }
 
-  .control-panel {
-    position: static;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .round-composer {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .round-composer__preview,
+  .control-actions {
+    width: 100%;
+  }
+
+  .score-input-list {
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  }
+
+  .score-input-item {
+    min-height: 84px;
+    padding: 9px 10px;
+  }
+
+  .score-input-item span {
+    font-size: 0.74rem;
   }
 
   .metric {
