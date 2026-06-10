@@ -6,6 +6,10 @@ export default defineNuxtConfig({
   },
   nitro: {
     preset: 'static',
+    output: {
+      dir: 'dist',
+      publicDir: 'dist',
+    },
   },
   devtools: { enabled: true },
   components: [
@@ -14,7 +18,7 @@ export default defineNuxtConfig({
       pathPrefix: false,
     },
   ],
-  css: ['~/assets/css/styles.css'],
+  css: ['~/assets/css/base.css'],
   app: {
     head: {
       htmlAttrs: { lang: 'ko' },

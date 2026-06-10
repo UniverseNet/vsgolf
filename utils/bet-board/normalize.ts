@@ -141,26 +141,7 @@ export const createParticipant = ({
   initialHandicap: normalizeHandicap(initialHandicap),
 })
 
-export const createDefaultParticipants = (): Participant[] => [
-  createParticipant({ name: DEFAULT_MY_NAME, initialHandicap: DEFAULT_INITIAL_HANDICAP }),
-  createParticipant({ name: DEFAULT_OPPONENT_NAME, initialHandicap: DEFAULT_INITIAL_HANDICAP }),
-]
-
-export const ensureMinimumParticipants = (participants: Participant[]): Participant[] => {
-  const nextParticipants = [...participants]
-
-  if (nextParticipants.length === 0) {
-    nextParticipants.push(createParticipant({ name: DEFAULT_MY_NAME, initialHandicap: DEFAULT_INITIAL_HANDICAP }))
-  }
-
-  if (nextParticipants.length === 1) {
-    nextParticipants.push(
-      createParticipant({ name: DEFAULT_OPPONENT_NAME, initialHandicap: DEFAULT_INITIAL_HANDICAP }),
-    )
-  }
-
-  return nextParticipants
-}
+export const createDefaultParticipants = (): Participant[] => []
 
 export const createDefaultSession = (): Session => ({
   id: createSessionId(),
@@ -197,7 +178,7 @@ const normalizeStoredParticipants = (storedParticipants: unknown): Participant[]
     }
 
     const p = participant as Partial<Participant>
-    const fallbackName = index === 0 ? DEFAULT_MY_NAME : `${DEFAULT_OPPONENT_NAME} ${index}`
+    const fallbackName = `${DEFAULT_OPPONENT_NAME} ${index + 1}`
     const rawId = typeof p.id === 'string' && p.id ? p.id : createParticipantId()
     const id = usedIds.has(rawId) ? createParticipantId() : rawId
 
@@ -386,10 +367,7 @@ const normalizeSavedSessionParticipants = (session: Record<string, unknown>) => 
     return (session.participants as Array<Record<string, unknown>>)
       .filter((participant) => participant && typeof participant === 'object')
       .map((participant, index) => ({
-        name: normalizeParticipantName(
-          participant.name,
-          index === 0 ? DEFAULT_MY_NAME : `${DEFAULT_OPPONENT_NAME} ${index}`,
-        ),
+        name: normalizeParticipantName(participant.name, `${DEFAULT_OPPONENT_NAME} ${index + 1}`),
         share: normalizeShare(participant.share),
         cost: Math.max(0, Math.round(Number(participant.cost) || 0)),
         handicap: Math.max(HANDICAP_MIN, Math.round(Number(participant.handicap) || 0)),
@@ -471,7 +449,7 @@ const normalizeStoredAppState = (storedValue: string): AppState => {
   const parsedValue = JSON.parse(storedValue) as Record<string, unknown>
 
   if (parsedValue?.version === APP_VERSION || parsedValue?.version === 4) {
-    const participants = ensureMinimumParticipants(normalizeStoredParticipants(parsedValue.participants))
+    const participants = normalizeStoredParticipants(parsedValue.participants)
 
     return {
       participants,

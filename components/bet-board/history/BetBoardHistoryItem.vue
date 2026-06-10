@@ -76,3 +76,108 @@ const stateText = computed(() => {
     </div>
   </li>
 </template>
+
+<style lang="scss" scoped>
+@use '~/assets/css/mixins' as *;
+
+.history-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 12px;
+  border: 1px solid rgba(34, 58, 50, 0.12);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(241, 247, 243, 0.76));
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms var(--ease-out);
+
+  &:hover {
+    transform: translateX(2px);
+    border-color: rgba(7, 137, 135, 0.2);
+    box-shadow: 0 10px 24px rgba(16, 26, 23, 0.08);
+  }
+
+  &--latest {
+    animation: history-enter 340ms var(--ease-out) both;
+  }
+}
+
+.history-item__round {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--teal), var(--brass));
+}
+
+.history-item__main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.history-item__result {
+  font-weight: 800;
+}
+
+.history-item__detail,
+.history-item__state {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.history-item__state {
+  text-align: right;
+  white-space: nowrap;
+  transform-origin: center;
+}
+
+.history-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.history-item__button {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid rgba(34, 58, 50, 0.14);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.72);
+
+  &--danger {
+    color: #7a2018;
+    border-color: rgba(211, 95, 77, 0.2);
+    background: rgba(255, 231, 226, 0.62);
+  }
+}
+
+@media (max-width: 720px) {
+  .history-item {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .history-item__state {
+    grid-column: 2;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .history-item__actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+</style>

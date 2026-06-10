@@ -1,0 +1,230 @@
+:root {
+  --bg: #eef4f1;
+  --ink: #101a17;
+  --ink-2: #172621;
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-solid: #fbfdfb;
+  --surface-tint: #f1f7f3;
+  --text: #14201c;
+  --muted: #65736d;
+  --border: rgba(34, 58, 50, 0.14);
+  --border-strong: rgba(34, 58, 50, 0.26);
+  --pine: #12392f;
+  --teal: #078987;
+  --mint: #38c98d;
+  --brass: #c79335;
+  --coral: #d35f4d;
+  --plum: #7a4c68;
+  --teal-soft: #ddf6f3;
+  --mint-soft: #e6f7ed;
+  --brass-soft: #fff1d5;
+  --coral-soft: #ffe7e2;
+  --shadow: 0 12px 32px rgba(16, 26, 23, 0.1);
+  --shadow-strong: 0 18px 52px rgba(16, 26, 23, 0.16);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes board-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panel-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes header-sheen {
+  from {
+    background-position:
+      0 0,
+      -180px 0;
+  }
+
+  to {
+    background-position:
+      58px 0,
+      calc(100% + 180px) 0;
+  }
+}
+
+@keyframes mark-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+      0 0 0 rgba(56, 201, 141, 0);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+      0 0 24px rgba(56, 201, 141, 0.36);
+  }
+}
+
+@keyframes save-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(56, 201, 141, 0.18);
+  }
+
+  50% {
+    box-shadow: 0 0 0 7px rgba(56, 201, 141, 0.08);
+  }
+}
+
+@keyframes value-pop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+
+  45% {
+    transform: translateY(-2px) scale(1.045);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes outcome-win {
+  0%,
+  100% {
+    box-shadow: var(--shadow);
+  }
+
+  48% {
+    box-shadow: 0 24px 62px rgba(7, 137, 135, 0.28);
+  }
+}
+
+@keyframes outcome-lose {
+  0%,
+  100% {
+    box-shadow: var(--shadow);
+  }
+
+  48% {
+    box-shadow: 0 24px 62px rgba(211, 95, 77, 0.26);
+  }
+}
+
+@keyframes history-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bar-flow {
+  from {
+    background-position:
+      0 0,
+      0 0;
+  }
+
+  to {
+    background-position:
+      32px 0,
+      0 0;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--ink);
+}
+
+body {
+  position: relative;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text);
+  font-family:
+    Pretendard,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.45;
+  background:
+    linear-gradient(145deg, rgba(16, 26, 23, 0.98) 0 170px, rgba(16, 26, 23, 0.5) 260px, rgba(238, 244, 241, 0) 410px),
+    linear-gradient(135deg, #edf6f1 0%, #f9faf7 45%, #eef4f8 100%);
+}
+
+body::before {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 360px;
+  background:
+    linear-gradient(115deg, rgba(56, 201, 141, 0.2), transparent 42%),
+    linear-gradient(135deg, rgba(199, 147, 53, 0.18), transparent 56%),
+    repeating-linear-gradient(118deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 18px),
+    linear-gradient(120deg, #0f1a17 0%, #14372d 48%, #0f2522 100%);
+  content: '';
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  border-color: var(--teal);
+  outline: 3px solid rgba(7, 137, 135, 0.24);
+  outline-offset: 1px;
+}
+
+@media (max-width: 720px) {
+  body::before {
+    height: 430px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

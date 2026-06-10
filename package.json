@@ -12,6 +12,7 @@
     "nuxt": "^3.16.2"
   },
   "devDependencies": {
+    "sass": "^1.100.0",
     "typescript": "^5.8.2"
   }
 }

@@ -13,6 +13,8 @@ import {
   getHistoryScoreText,
   getLeaderText,
   getLeadingParticipant,
+  getLowestBurdenParticipant,
+  getLowestBurdenText,
   getSessionMetaText,
   getShareRatioText,
 } from '~/utils/bet-board/format'
@@ -66,15 +68,22 @@ export const useBetBoard = () => {
 
   const matchState = computed(() => buildMatchState(appState.value))
   const participantsWithCosts = computed(() => getParticipantsWithCosts(matchState.value, dinnerPrice.value))
-  const myParticipant = computed(() => participantsWithCosts.value[0])
   const leadingParticipant = computed(() => getLeadingParticipant(participantsWithCosts.value))
+  const lowestBurdenParticipant = computed(() => getLowestBurdenParticipant(participantsWithCosts.value))
   const shareRatioText = computed(() => getShareRatioText(participantsWithCosts.value))
   const leaderText = computed(() => getLeaderText(participantsWithCosts.value))
+  const lowestBurdenText = computed(() => getLowestBurdenText(participantsWithCosts.value))
   const handicapMax = computed(() => getHandicapMax(participantsWithCosts.value))
 
   const averageInitialHandicap = computed(() => {
+    const participantCount = appState.value.participants.length
+
+    if (participantCount === 0) {
+      return 0
+    }
+
     const total = appState.value.participants.reduce((sum, p) => sum + p.initialHandicap, 0)
-    return total / appState.value.participants.length
+    return total / participantCount
   })
 
   const roundPreviewText = computed(() =>
@@ -156,9 +165,7 @@ export const useBetBoard = () => {
   }
 
   const deleteParticipant = (participantId: string) => {
-    const isOwnerParticipant = appState.value.participants[0]?.id === participantId
-
-    if (appState.value.participants.length <= MIN_PARTICIPANTS || isOwnerParticipant) {
+    if (!appState.value.participants.some((participant) => participant.id === participantId)) {
       return
     }
 
@@ -446,10 +453,11 @@ export const useBetBoard = () => {
     roundCourseName,
     matchState,
     participantsWithCosts,
-    myParticipant,
     leadingParticipant,
+    lowestBurdenParticipant,
     shareRatioText,
     leaderText,
+    lowestBurdenText,
     handicapMax,
     averageInitialHandicap,
     roundPreviewText,

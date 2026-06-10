@@ -4,7 +4,7 @@ const {
   participantsWithCosts,
   shareRatioText,
   settlementSummary,
-  myParticipant,
+  lowestBurdenParticipant,
   leadingParticipant,
   dinnerPrice,
   copySettlementSummary,
@@ -46,12 +46,12 @@ const {
         <strong>{{ formatWon(dinnerPrice) }}</strong>
       </article>
       <article class="settlement-card">
-        <span>내 정산</span>
-        <strong>{{ formatWon(myParticipant.cost) }}</strong>
+        <span>최소 정산</span>
+        <strong>{{ lowestBurdenParticipant ? formatWon(lowestBurdenParticipant.cost) : '-' }}</strong>
       </article>
       <article class="settlement-card">
         <span>최다 부담</span>
-        <strong>{{ leadingParticipant.name }}</strong>
+        <strong>{{ leadingParticipant?.name ?? '-' }}</strong>
       </article>
     </div>
 
@@ -87,3 +87,230 @@ const {
     </div>
   </section>
 </template>
+
+<style lang="scss" scoped>
+@use '~/assets/css/mixins' as *;
+
+.settlement-panel {
+  @include panel-surface;
+  margin-top: 16px;
+  padding: 18px;
+  @include panel-rise(230ms);
+}
+
+.settlement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+
+  .button {
+    min-height: 38px;
+    padding: 0 12px;
+  }
+}
+
+.button {
+  @include button-base;
+
+  &--neutral {
+    color: var(--text);
+    border-color: rgba(34, 58, 50, 0.16);
+    background: linear-gradient(180deg, #ffffff, #eef5f1);
+  }
+}
+
+.settlement-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.25fr) repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.settlement-card {
+  display: grid;
+  gap: 5px;
+  min-height: 88px;
+  padding: 14px;
+  border: 1px solid rgba(34, 58, 50, 0.11);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+
+  span,
+  small {
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+  }
+
+  strong {
+    color: var(--text);
+    font-size: 1.18rem;
+    font-weight: 800;
+    line-height: 1.18;
+  }
+
+  &--wide strong {
+    word-break: keep-all;
+  }
+}
+
+.settlement-participants {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.settlement-participant {
+  display: grid;
+  gap: 5px;
+  min-height: 84px;
+  padding: 13px;
+  border: 1px solid rgba(34, 58, 50, 0.11);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+
+  span,
+  small {
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+  }
+
+  strong {
+    color: var(--text);
+    font-size: 1.16rem;
+    font-weight: 800;
+  }
+}
+
+.settlement-summary {
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid rgba(7, 137, 135, 0.14);
+  border-radius: 8px;
+  color: #1d4841;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: rgba(221, 246, 243, 0.52);
+}
+
+.saved-sessions {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(34, 58, 50, 0.1);
+}
+
+.saved-sessions__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text);
+  font-size: 0.94rem;
+
+  span {
+    color: var(--muted);
+    font-weight: 700;
+  }
+}
+
+.saved-session-list {
+  display: grid;
+  gap: 8px;
+  max-height: 210px;
+  margin: 10px 0 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+
+  &:empty::before {
+    display: grid;
+    place-items: center;
+    min-height: 54px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.42);
+    content: '저장된 세션이 없습니다';
+  }
+}
+
+.saved-session-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid rgba(34, 58, 50, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.saved-session-item__main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+
+  strong {
+    overflow: hidden;
+    font-size: 0.94rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  span {
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+  }
+}
+
+.saved-session-item__amount {
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+  .settlement-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .settlement-card--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .settlement-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settlement-actions {
+    justify-content: stretch;
+    width: 100%;
+
+    .button {
+      flex: 1 1 0;
+    }
+  }
+
+  .settlement-summary {
+    font-size: 0.84rem;
+  }
+
+  .saved-session-item {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-session-item__amount {
+    justify-self: start;
+  }
+}
+</style>

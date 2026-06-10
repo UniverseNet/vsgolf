@@ -36,22 +36,59 @@ export const getSessionMetaText = (session: Session) => formatDateText(session.d
 
 export const formatRoundCourseText = (courseName?: string) => courseName?.trim() || ''
 
-export const getShareRatioText = (participants: ParticipantWithCost[]) =>
-  participants.map((participant) => `${participant.name} ${participant.share}`).join(' : ')
+export const getShareRatioText = (participants: ParticipantWithCost[]) => {
+  if (participants.length === 0) {
+    return '-'
+  }
+
+  return participants.map((participant) => `${participant.name} ${participant.share}`).join(' : ')
+}
 
 export const getLeaderText = (participants: ParticipantWithCost[]) => {
+  if (participants.length === 0) {
+    return '참가자 없음'
+  }
+
   const highestShare = Math.max(...participants.map((participant) => participant.share))
   const leaders = participants.filter((participant) => participant.share === highestShare)
 
   return leaders.map((participant) => participant.name).join(', ')
 }
 
-export const getLeadingParticipant = (participants: ParticipantWithCost[]) =>
-  participants.reduce(
+export const getLeadingParticipant = (participants: ParticipantWithCost[]): ParticipantWithCost | null => {
+  if (participants.length === 0) {
+    return null
+  }
+
+  return participants.reduce(
     (leadingParticipant, participant) =>
       participant.share > leadingParticipant.share ? participant : leadingParticipant,
     participants[0],
   )
+}
+
+export const getLowestBurdenText = (participants: ParticipantWithCost[]) => {
+  if (participants.length === 0) {
+    return '참가자 없음'
+  }
+
+  const lowestShare = Math.min(...participants.map((participant) => participant.share))
+  const lowestBurdenParticipants = participants.filter((participant) => participant.share === lowestShare)
+
+  return lowestBurdenParticipants.map((participant) => participant.name).join(', ')
+}
+
+export const getLowestBurdenParticipant = (participants: ParticipantWithCost[]): ParticipantWithCost | null => {
+  if (participants.length === 0) {
+    return null
+  }
+
+  return participants.reduce(
+    (lowestBurdenParticipant, participant) =>
+      participant.share < lowestBurdenParticipant.share ? participant : lowestBurdenParticipant,
+    participants[0],
+  )
+}
 
 export const getHandicapDeltaText = (participant: ParticipantWithCost) => {
   const delta = participant.handicap - participant.initialHandicap

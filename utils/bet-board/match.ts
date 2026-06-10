@@ -147,12 +147,17 @@ export const getParticipantColor = (index: number) => {
   }
 }
 
-export const getHandicapMax = (participants: ParticipantWithCost[]) =>
-  Math.max(
+export const getHandicapMax = (participants: ParticipantWithCost[]) => {
+  if (participants.length === 0) {
+    return HANDICAP_BASE_MAX
+  }
+
+  return Math.max(
     HANDICAP_BASE_MAX,
     ...participants.map((participant) => participant.handicap + 2),
     ...participants.map((participant) => participant.initialHandicap + 2),
   )
+}
 
 export const getHandicapPercent = (participant: ParticipantWithCost, handicapMax: number) => {
   const clampedHandicap = clamp(participant.handicap, HANDICAP_MIN, handicapMax)
