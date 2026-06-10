@@ -1,9 +1,15 @@
 <script setup lang="ts">
 const { $pwa } = useNuxtApp()
+const {
+  isAndroid,
+  openInChromeUrl,
+  showAndroidInstallGuide,
+} = usePwaInstallHint()
 
 const showUpdatePrompt = computed(() => Boolean($pwa?.needRefresh))
 const showOfflineReady = computed(() => Boolean($pwa?.offlineReady))
 const showInstallPrompt = computed(() => Boolean($pwa?.showInstallPrompt))
+const showPlayProtectGuide = computed(() => showInstallPrompt.value && isAndroid)
 
 const dismissOfflineReady = async () => {
   await $pwa?.cancelPrompt()
@@ -39,6 +45,28 @@ const dismissInstall = () => {
 
     <div v-if="showInstallPrompt" class="pwa-prompt pwa-prompt--install">
       <p>홈 화면에 추가하면 앱처럼 사용할 수 있습니다.</p>
+
+      <div v-if="showPlayProtectGuide" class="pwa-prompt__guide">
+        <p v-if="showAndroidInstallGuide" class="pwa-prompt__note">
+          삼성 인터넷 등 일부 브라우저에서는 Play Protect 경고로 설치가 막힐 수 있습니다.
+          <strong>Chrome</strong>에서 설치해 주세요.
+        </p>
+        <p v-else class="pwa-prompt__note">
+          Play Protect 경고가 나오면 앱 문제가 아니라 Android의 WebAPK 보안 검사입니다.
+        </p>
+        <ul class="pwa-prompt__steps">
+          <li>Chrome 메뉴(⋮) → 「홈 화면에 추가」 또는 아래 「설치」</li>
+          <li>경고 화면에서 「자세히」 → 「그래도 설치」 선택</li>
+        </ul>
+        <a
+          v-if="showAndroidInstallGuide"
+          class="pwa-prompt__link"
+          :href="openInChromeUrl"
+        >
+          Chrome에서 열기
+        </a>
+      </div>
+
       <div class="pwa-prompt__actions">
         <button type="button" class="pwa-prompt__primary" @click="installApp">설치</button>
         <button type="button" @click="dismissInstall">닫기</button>
@@ -95,6 +123,38 @@ const dismissInstall = () => {
     color: #fff;
     border-color: transparent;
     background: linear-gradient(135deg, var(--teal), var(--mint));
+  }
+
+  &__guide {
+    display: grid;
+    gap: 8px;
+  }
+
+  &__note {
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    color: var(--muted);
+  }
+
+  &__steps {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    line-height: 1.45;
+
+    li + li {
+      margin-top: 4px;
+    }
+  }
+
+  &__link {
+    justify-self: start;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--teal);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   &--info {

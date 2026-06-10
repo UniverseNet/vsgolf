@@ -50,6 +50,7 @@ export default defineNuxtConfig({
     registerType: 'autoUpdate',
     includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', '.nojekyll'],
     manifest: {
+      id: '/vsgolf/',
       name: 'VSGolf 저녁내기',
       short_name: 'VSGolf',
       description: '스크린골프 저녁내기 진행판',
@@ -57,17 +58,22 @@ export default defineNuxtConfig({
       background_color: '#f3f6f4',
       display: 'standalone',
       lang: 'ko',
+      dir: 'ltr',
       orientation: 'portrait',
+      categories: ['utilities', 'sports'],
+      prefer_related_applications: false,
       icons: [
         {
           src: 'pwa-192x192.png',
           sizes: '192x192',
           type: 'image/png',
+          purpose: 'any',
         },
         {
           src: 'pwa-512x512.png',
           sizes: '512x512',
           type: 'image/png',
+          purpose: 'any',
         },
         {
           src: 'pwa-512x512.png',
@@ -78,7 +84,7 @@ export default defineNuxtConfig({
       ],
     },
     workbox: {
-      navigateFallback: '/index.html',
+      navigateFallback: '/vsgolf/index.html',
       globPatterns: ['**/*.{js,css,html,png,ico,svg,woff2,json,webmanifest}'],
     },
     client: {
