@@ -1,72 +1,76 @@
 @mixin panel-surface {
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 8px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(249, 253, 250, 0.82)), var(--surface-solid);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 @mixin panel-rise($delay: 0ms) {
-  animation: panel-rise 560ms var(--ease-out) $delay both;
+  animation: panel-rise 480ms var(--ease-out) $delay both;
 }
 
 @mixin form-input {
   width: 100%;
-  min-height: 44px;
-  padding: 0 12px;
+  min-height: 48px;
+  padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--text);
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  font-weight: 600;
+  background: var(--surface);
   transition:
-    background-color 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease,
-    transform 180ms ease;
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 
   &:hover {
-    border-color: rgba(7, 137, 135, 0.3);
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.9),
-      0 8px 18px rgba(16, 26, 23, 0.08);
+    border-color: rgba(7, 137, 135, 0.28);
+  }
+
+  &:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px rgba(7, 137, 135, 0.12);
+    outline: none;
   }
 }
 
 @mixin button-base {
-  min-height: 50px;
+  min-height: 48px;
   border: 1px solid transparent;
-  border-radius: 8px;
-  font-weight: 800;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
   transition:
-    filter 140ms ease,
+    background-color 140ms ease,
     border-color 140ms ease,
     transform 140ms ease,
     box-shadow 140ms ease;
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    filter: saturate(1.08);
-    box-shadow: 0 10px 22px rgba(16, 26, 23, 0.16);
+    box-shadow: var(--shadow-sm);
   }
 
   &:active:not(:disabled) {
-    transform: translateY(0) scale(0.985);
+    transform: translateY(0);
   }
 }
 
 @mixin eyebrow-text {
-  margin: 0 0 4px;
-  color: inherit;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0;
+  margin: 0 0 6px;
+  color: var(--teal);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 @mixin muted-label-text {
-  color: rgba(20, 32, 28, 0.66);
-  font-size: 0.88rem;
-  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+@mixin page-stack {
+  display: grid;
+  gap: 16px;
+  animation: board-fade-in 420ms var(--ease-out) both;
 }

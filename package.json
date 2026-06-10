@@ -3,15 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nuxt generate",
+    "build": "nuxt generate && cp public/.nojekyll docs/.nojekyll",
     "dev": "nuxt dev",
-    "generate": "nuxt generate",
+    "generate": "nuxt generate && cp public/.nojekyll docs/.nojekyll",
     "preview": "nuxt preview"
   },
   "dependencies": {
     "nuxt": "^3.16.2"
   },
   "devDependencies": {
+    "@vite-pwa/nuxt": "^1.1.1",
     "sass": "^1.100.0",
     "typescript": "^5.8.2"
   }

@@ -13,7 +13,7 @@ const {
 
 <template>
   <section class="split-panel" aria-label="비용 부담 비율">
-    <BetBoardSectionHeading eyebrow="Split" title="저녁값 부담 비율" :value="shareRatioText" />
+    <p class="split-panel__ratio">{{ shareRatioText }}</p>
 
     <div class="split-bar" aria-hidden="true">
       <span
@@ -70,7 +70,17 @@ const {
 
 .split-panel {
   @include panel-surface;
-  padding: 18px;
+  padding: 16px;
+}
+
+.split-panel__ratio {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: #17443d;
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: var(--teal-soft);
 }
 
 .split-bar {

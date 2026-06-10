@@ -75,11 +75,19 @@ export interface SavedSession {
   savedAt: string
 }
 
-export interface AppState {
+export interface Match {
+  id: string
+  title: string
+  date: string
+  dinnerPrice: number
   participants: Participant[]
   history: RoundEntry[]
-  currentSession: Session
-  savedSessions: SavedSession[]
+  updatedAt: string
+}
+
+export interface AppState {
+  matches: Match[]
+  activeMatchId: string
 }
 
 export interface RoundScoreSummary {

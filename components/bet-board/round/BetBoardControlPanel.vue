@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const {
-  appState,
+  activeMatch,
   matchState,
   participantsWithCosts,
   roundPreviewText,
@@ -20,13 +20,7 @@ const onScoreInput = (participantId: string, event: Event) => {
 
 <template>
   <section class="control-panel" aria-label="내기 결과 입력">
-    <div class="round-composer">
-      <div>
-        <p class="round-composer__eyebrow">Round</p>
-        <h2>이번 라운드</h2>
-      </div>
-      <output class="round-composer__preview">{{ roundPreviewText }}</output>
-    </div>
+    <output class="round-composer__preview">{{ roundPreviewText }}</output>
 
     <label class="round-course-field" for="roundCourseInput">
       <span>골프장 <em class="round-course-field__optional">선택</em></span>
@@ -74,7 +68,7 @@ const onScoreInput = (participantId: string, event: Event) => {
       <button
         class="result-button result-button--win"
         type="button"
-        :disabled="appState.participants.length < MIN_PARTICIPANTS"
+        :disabled="(activeMatch?.participants.length ?? 0) < MIN_PARTICIPANTS"
         @click="applyRoundResult"
       >
         결과 입력
@@ -99,73 +93,30 @@ const onScoreInput = (participantId: string, event: Event) => {
 
 .control-panel {
   @include panel-surface;
-  position: sticky;
-  bottom: 16px;
-  z-index: 30;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-areas:
-    'composer actions'
-    'course course'
-    'scores scores';
-  align-items: start;
-  gap: 10px;
-  margin-top: 16px;
-  padding: 12px;
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 18px 48px rgba(16, 26, 23, 0.2);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  animation: panel-rise 560ms var(--ease-out) 300ms both;
-}
-
-.round-composer {
-  grid-area: composer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
-
-  h2 {
-    margin: 0;
-    color: var(--text);
-    font-size: 1.08rem;
-    line-height: 1.2;
-  }
-}
-
-.round-composer__eyebrow {
-  margin: 0 0 4px;
-  color: var(--teal);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  text-transform: uppercase;
+  gap: 14px;
+  padding: 16px;
 }
 
 .round-composer__preview {
-  display: inline-flex;
-  align-items: center;
-  min-height: 36px;
-  padding: 6px 11px;
-  border: 1px solid rgba(7, 137, 135, 0.18);
-  border-radius: 8px;
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
   color: #17443d;
   font-size: 0.9rem;
-  font-weight: 800;
-  background: rgba(221, 246, 243, 0.78);
-  white-space: nowrap;
+  font-weight: 700;
+  line-height: 1.45;
+  background: var(--teal-soft);
 }
 
 .round-course-field {
-  grid-area: course;
   display: grid;
-  gap: 7px;
+  gap: 6px;
   color: var(--muted);
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.84rem;
+  font-weight: 600;
 
   input {
     @include form-input;
@@ -180,10 +131,8 @@ const onScoreInput = (participantId: string, event: Event) => {
 }
 
 .score-entry-panel {
-  grid-area: scores;
   display: grid;
-  gap: 8px;
-  min-width: 0;
+  gap: 10px;
 }
 
 .score-entry-panel__header {
@@ -265,12 +214,9 @@ const onScoreInput = (participantId: string, event: Event) => {
 }
 
 .control-actions {
-  grid-area: actions;
   display: grid;
-  grid-template-columns: minmax(92px, 1fr) minmax(92px, 1fr) minmax(92px, 1fr);
+  grid-template-columns: 1.2fr 1fr 1fr;
   gap: 8px;
-  justify-self: end;
-  width: min(100%, 380px);
 }
 
 .result-button,
@@ -290,45 +236,13 @@ const onScoreInput = (participantId: string, event: Event) => {
   background: linear-gradient(180deg, #ffffff, #eef5f1);
 }
 
-@media (max-width: 960px) {
-  .control-panel {
-    position: static;
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      'composer'
-      'course'
-      'scores'
-      'actions';
-  }
-
-  .control-actions {
-    justify-self: stretch;
-    width: 100%;
-  }
-}
-
 @media (max-width: 720px) {
-  .round-composer {
-    align-items: start;
-    flex-direction: column;
-  }
-
-  .round-composer__preview,
   .control-actions {
-    width: 100%;
+    grid-template-columns: 1fr;
   }
 
   .score-input-list {
-    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-  }
-
-  .score-input-item {
-    min-height: 84px;
-    padding: 9px 10px;
-
-    span {
-      font-size: 0.74rem;
-    }
+    grid-template-columns: 1fr 1fr;
   }
 }
 </style>

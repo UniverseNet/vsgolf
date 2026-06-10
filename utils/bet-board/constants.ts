@@ -1,4 +1,4 @@
-export const APP_VERSION = 5
+export const APP_VERSION = 6
 export const DEFAULT_INITIAL_HANDICAP = 10
 export const DEFAULT_PARTICIPANT_SHARE = 5
 export const DEFAULT_MY_NAME = '나'
@@ -10,6 +10,7 @@ export const HANDICAP_INPUT_MAX = 99
 export const HANDICAP_BASE_MAX = 20
 export const MIN_PARTICIPANTS = 2
 export const MAX_SAVED_SESSIONS = 8
+export const MAX_MATCHES = 12
 export const STORAGE_KEY = 'vsgolf:dinner-bet-history'
 
 export const PARTICIPANT_COLORS = [

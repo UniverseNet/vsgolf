@@ -4,11 +4,7 @@ const { matchState, participantsWithCosts } = useBetBoardContext()
 
 <template>
   <section class="handicap-panel" aria-label="핸디 변화">
-    <BetBoardSectionHeading
-      eyebrow="Handicap"
-      title="참가자 핸디"
-      :value="`${matchState.history.length}라운드`"
-    />
+    <p class="handicap-panel__meta">{{ matchState.history.length }}라운드 기준</p>
 
     <div class="handicap-list">
       <BetBoardHandicapItem
@@ -36,7 +32,14 @@ const { matchState, participantsWithCosts } = useBetBoardContext()
 
 .handicap-panel {
   @include panel-surface;
-  padding: 18px;
+  padding: 16px;
+}
+
+.handicap-panel__meta {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
 .handicap-list {

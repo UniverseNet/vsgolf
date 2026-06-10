@@ -1,5 +1,6 @@
 import type {
   AppState,
+  Match,
   Participant,
   RoundEntry,
   SavedSession,
@@ -15,6 +16,7 @@ import {
   DEFAULT_SESSION_TITLE,
   HANDICAP_INPUT_MAX,
   HANDICAP_MIN,
+  MAX_MATCHES,
   MAX_SAVED_SESSIONS,
   MIN_PARTICIPANTS,
 } from './constants'
@@ -405,18 +407,94 @@ const normalizeSavedSessions = (savedSessions: unknown): SavedSession[] => {
     })
 }
 
-const createDefaultAppState = (history: RoundEntry[] = []): AppState => {
-  const participants = createDefaultParticipants()
+export const createDefaultMatch = ({
+  title,
+  date,
+  dinnerPrice,
+  participants,
+  history,
+}: {
+  title?: unknown
+  date?: string
+  dinnerPrice?: unknown
+  participants?: Participant[]
+  history?: RoundEntry[]
+} = {}): Match => {
+  const session = createDefaultSession()
 
   return {
-    participants,
-    history: normalizeRoundHistory(history, participants),
-    currentSession: createDefaultSession(),
-    savedSessions: [],
+    id: session.id,
+    title: normalizeSessionTitle(title ?? session.title),
+    date: date ?? session.date,
+    dinnerPrice: normalizeDinnerPrice(dinnerPrice ?? session.dinnerPrice),
+    participants: participants ?? [],
+    history: history ?? [],
+    updatedAt: new Date().toISOString(),
   }
 }
 
-const createMigratedLegacyState = (parsedValue: Record<string, unknown>): AppState => {
+const normalizeStoredMatch = (storedMatch: unknown): Match | null => {
+  if (!storedMatch || typeof storedMatch !== 'object') {
+    return null
+  }
+
+  const match = storedMatch as Partial<Match>
+  const participants = normalizeStoredParticipants(match.participants)
+  const session = normalizeStoredSession(match)
+
+  return {
+    id: session.id,
+    title: session.title,
+    date: session.date,
+    dinnerPrice: session.dinnerPrice,
+    participants,
+    history: normalizeRoundHistory(match.history, participants),
+    updatedAt:
+      typeof match.updatedAt === 'string' && match.updatedAt ? match.updatedAt : new Date().toISOString(),
+  }
+}
+
+const normalizeStoredMatches = (storedMatches: unknown): Match[] => {
+  if (!Array.isArray(storedMatches)) {
+    return []
+  }
+
+  return storedMatches
+    .map((storedMatch) => normalizeStoredMatch(storedMatch))
+    .filter((match): match is Match => match !== null)
+    .slice(0, MAX_MATCHES)
+}
+
+const createDefaultAppState = (history: RoundEntry[] = []): AppState => {
+  const match = createDefaultMatch({
+    history: normalizeRoundHistory(history, []),
+  })
+
+  return {
+    matches: [match],
+    activeMatchId: match.id,
+  }
+}
+
+const createMatchFromLegacyBoard = ({
+  participants,
+  history,
+  session,
+}: {
+  participants: Participant[]
+  history: RoundEntry[]
+  session: Session
+}): Match => ({
+  id: session.id,
+  title: session.title,
+  date: session.date,
+  dinnerPrice: session.dinnerPrice,
+  participants,
+  history: normalizeRoundHistory(history, participants),
+  updatedAt: new Date().toISOString(),
+})
+
+const migrateLegacyBoardState = (parsedValue: Record<string, unknown>): AppState => {
   const legacyOpponents = normalizeStoredLegacyOpponents(parsedValue?.opponents)
 
   if (legacyOpponents.length === 0) {
@@ -436,31 +514,61 @@ const createMigratedLegacyState = (parsedValue: Record<string, unknown>): AppSta
       initialHandicap: DEFAULT_INITIAL_HANDICAP,
     }),
   ]
+  const match = createMatchFromLegacyBoard({
+    participants,
+    history: activeOpponent.history,
+    session: normalizeStoredSession(parsedValue.currentSession),
+  })
 
   return {
+    matches: [match],
+    activeMatchId: match.id,
+  }
+}
+
+const migrateSingleBoardState = (parsedValue: Record<string, unknown>): AppState => {
+  const participants = normalizeStoredParticipants(parsedValue.participants)
+  const session = normalizeStoredSession(parsedValue.currentSession)
+  const match = createMatchFromLegacyBoard({
     participants,
-    history: normalizeRoundHistory(activeOpponent.history, participants),
-    currentSession: normalizeStoredSession(parsedValue.currentSession),
-    savedSessions: normalizeSavedSessions(parsedValue.savedSessions),
+    history: parsedValue.history as RoundEntry[],
+    session,
+  })
+
+  return {
+    matches: [match],
+    activeMatchId: match.id,
   }
 }
 
 const normalizeStoredAppState = (storedValue: string): AppState => {
   const parsedValue = JSON.parse(storedValue) as Record<string, unknown>
 
-  if (parsedValue?.version === APP_VERSION || parsedValue?.version === 4) {
-    const participants = normalizeStoredParticipants(parsedValue.participants)
+  if (parsedValue?.version === APP_VERSION) {
+    const matches = normalizeStoredMatches(parsedValue.matches)
+
+    if (matches.length === 0) {
+      return createDefaultAppState()
+    }
+
+    const activeMatchId =
+      typeof parsedValue.activeMatchId === 'string' &&
+      matches.some((match) => match.id === parsedValue.activeMatchId)
+        ? parsedValue.activeMatchId
+        : matches[0].id
 
     return {
-      participants,
-      history: normalizeRoundHistory(parsedValue.history, participants),
-      currentSession: normalizeStoredSession(parsedValue.currentSession),
-      savedSessions: normalizeSavedSessions(parsedValue.savedSessions),
+      matches,
+      activeMatchId,
     }
   }
 
+  if (parsedValue?.version === 5 || parsedValue?.version === 4) {
+    return migrateSingleBoardState(parsedValue)
+  }
+
   if (parsedValue?.version === 2 || parsedValue?.version === 3) {
-    return createMigratedLegacyState(parsedValue)
+    return migrateLegacyBoardState(parsedValue)
   }
 
   const legacyHistory = Array.isArray(parsedValue) ? parsedValue : (parsedValue?.history as RoundEntry[])
@@ -488,18 +596,21 @@ export const loadStoredAppState = (): AppState => {
   }
 }
 
-export const serializeAppState = (state: AppState, dinnerPrice: number) =>
+export const serializeAppState = (state: AppState) =>
   JSON.stringify({
     version: APP_VERSION,
-    participants: state.participants.map((participant) => ({
-      id: participant.id,
-      name: participant.name,
-      initialHandicap: participant.initialHandicap,
+    activeMatchId: state.activeMatchId,
+    matches: state.matches.map((match) => ({
+      id: match.id,
+      title: match.title,
+      date: match.date,
+      dinnerPrice: match.dinnerPrice,
+      participants: match.participants.map((participant) => ({
+        id: participant.id,
+        name: participant.name,
+        initialHandicap: participant.initialHandicap,
+      })),
+      history: normalizeRoundHistory(match.history, match.participants),
+      updatedAt: match.updatedAt,
     })),
-    history: normalizeRoundHistory(state.history, state.participants),
-    currentSession: {
-      ...state.currentSession,
-      dinnerPrice,
-    },
-    savedSessions: state.savedSessions,
   })

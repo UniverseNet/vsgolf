@@ -4,8 +4,6 @@ const { reversedHistory, swapHistoryResult, deleteHistoryResult } = useBetBoardC
 
 <template>
   <section class="history-panel" aria-label="진행 기록">
-    <BetBoardSectionHeading eyebrow="History" title="라운드 기록" />
-
     <ol class="history-list">
       <BetBoardHistoryItem
         v-for="(entry, index) in reversedHistory"
@@ -24,9 +22,7 @@ const { reversedHistory, swapHistoryResult, deleteHistoryResult } = useBetBoardC
 
 .history-panel {
   @include panel-surface;
-  margin-top: 16px;
-  padding: 18px;
-  @include panel-rise(250ms);
+  padding: 16px;
 }
 
 .history-list {

@@ -1,10 +1,8 @@
-import type { AppState, ParticipantWithCost, SavedSession } from '~/types/bet-board'
-import { STORAGE_KEY } from '~/utils/bet-board/constants'
+import type { AppState, Match, ParticipantWithCost } from '~/types/bet-board'
+import { MAX_MATCHES, MIN_PARTICIPANTS, STORAGE_KEY } from '~/utils/bet-board/constants'
 import {
   DEFAULT_DINNER_PRICE,
   DEFAULT_INITIAL_HANDICAP,
-  MIN_PARTICIPANTS,
-  MAX_SAVED_SESSIONS,
 } from '~/utils/bet-board/constants'
 import {
   formatDateText,
@@ -28,13 +26,12 @@ import {
   getRoundScoreSummary,
 } from '~/utils/bet-board/match'
 import {
-  createDefaultSession,
+  createDefaultMatch,
   createParticipant,
-  createSessionId,
   getTodayDateValue,
   loadStoredAppState,
-  normalizeDinnerPrice,
   normalizeCourseName,
+  normalizeDinnerPrice,
   normalizeParticipantName,
   normalizeRoundHistory,
   normalizeSessionTitle,
@@ -44,12 +41,26 @@ import {
 export const useBetBoard = () => {
   const appState = ref<AppState>(loadStoredAppState())
   const pendingDeleteParticipantId = ref<string | null>(null)
-  const pendingNewSession = ref(false)
+  const pendingDeleteMatchId = ref<string | null>(null)
   const roundScoreInputs = ref<Record<string, string>>({})
   const saveStatusText = ref('저장됨')
   const saveStatusAnimating = ref(false)
   const boardRoundFeedback = ref(false)
-  const dinnerPriceDisplay = ref(formatPriceInput(appState.value.currentSession.dinnerPrice))
+
+  const activeMatch = computed(
+    () =>
+      appState.value.matches.find((match) => match.id === appState.value.activeMatchId) ??
+      appState.value.matches[0],
+  )
+
+  const matchList = computed(() =>
+    [...appState.value.matches].sort(
+      (leftMatch, rightMatch) =>
+        new Date(rightMatch.updatedAt).getTime() - new Date(leftMatch.updatedAt).getTime(),
+    ),
+  )
+
+  const dinnerPriceDisplay = ref(formatPriceInput(activeMatch.value?.dinnerPrice ?? DEFAULT_DINNER_PRICE))
 
   const newParticipantName = ref('')
   const newParticipantHandicap = ref(String(DEFAULT_INITIAL_HANDICAP))
@@ -66,7 +77,13 @@ export const useBetBoard = () => {
     return inputValue
   })
 
-  const matchState = computed(() => buildMatchState(appState.value))
+  const matchState = computed(() =>
+    buildMatchState({
+      participants: activeMatch.value?.participants ?? [],
+      history: activeMatch.value?.history ?? [],
+    }),
+  )
+
   const participantsWithCosts = computed(() => getParticipantsWithCosts(matchState.value, dinnerPrice.value))
   const leadingParticipant = computed(() => getLeadingParticipant(participantsWithCosts.value))
   const lowestBurdenParticipant = computed(() => getLowestBurdenParticipant(participantsWithCosts.value))
@@ -76,30 +93,75 @@ export const useBetBoard = () => {
   const handicapMax = computed(() => getHandicapMax(participantsWithCosts.value))
 
   const averageInitialHandicap = computed(() => {
-    const participantCount = appState.value.participants.length
+    const participantCount = activeMatch.value?.participants.length ?? 0
 
     if (participantCount === 0) {
       return 0
     }
 
-    const total = appState.value.participants.reduce((sum, p) => sum + p.initialHandicap, 0)
+    const total = activeMatch.value!.participants.reduce((sum, participant) => sum + participant.initialHandicap, 0)
     return total / participantCount
   })
 
   const roundPreviewText = computed(() =>
-    getRoundScoreSummary(appState.value.participants, new Map(Object.entries(roundScoreInputs.value))).message,
+    getRoundScoreSummary(
+      activeMatch.value?.participants ?? [],
+      new Map(Object.entries(roundScoreInputs.value)),
+    ).message,
   )
 
-  const settlementSummary = computed(() =>
-    buildSettlementSummary({
+  const settlementSummary = computed(() => {
+    const match = activeMatch.value
+
+    if (!match) {
+      return ''
+    }
+
+    return buildSettlementSummary({
       participants: participantsWithCosts.value,
       dinnerPrice: dinnerPrice.value,
       roundCount: matchState.value.history.length,
-      session: appState.value.currentSession,
-    }),
-  )
+      session: {
+        id: match.id,
+        title: match.title,
+        date: match.date,
+        dinnerPrice: dinnerPrice.value,
+      },
+    })
+  })
 
   const reversedHistory = computed(() => [...matchState.value.history].reverse())
+
+  const clearRoundInputs = () => {
+    roundScoreInputs.value = {}
+    roundCourseName.value = ''
+  }
+
+  const updateActiveMatch = (updater: (match: Match) => Match) => {
+    if (!activeMatch.value) {
+      return
+    }
+
+    appState.value = {
+      ...appState.value,
+      matches: appState.value.matches.map((match) =>
+        match.id === appState.value.activeMatchId
+          ? { ...updater(match), updatedAt: new Date().toISOString() }
+          : match,
+      ),
+    }
+  }
+
+  const syncDinnerPriceToActiveMatch = () => {
+    updateActiveMatch((match) => ({
+      ...match,
+      dinnerPrice: dinnerPrice.value,
+    }))
+  }
+
+  const syncDinnerPriceFromActiveMatch = () => {
+    dinnerPriceDisplay.value = formatPriceInput(activeMatch.value?.dinnerPrice ?? DEFAULT_DINNER_PRICE)
+  }
 
   const flashSaveStatus = (text: string) => {
     saveStatusText.value = text
@@ -114,8 +176,10 @@ export const useBetBoard = () => {
       return
     }
 
+    syncDinnerPriceToActiveMatch()
+
     try {
-      localStorage.setItem(STORAGE_KEY, serializeAppState(appState.value, dinnerPrice.value))
+      localStorage.setItem(STORAGE_KEY, serializeAppState(appState.value))
       flashSaveStatus(statusText)
     } catch (error) {
       console.warn('내기 정보를 저장하지 못했습니다.', error)
@@ -136,72 +200,70 @@ export const useBetBoard = () => {
     roundScoreInputs.value = { ...roundScoreInputs.value, [participantId]: value }
   }
 
-  const syncDinnerPriceFromSession = () => {
-    dinnerPriceDisplay.value = formatPriceInput(appState.value.currentSession.dinnerPrice)
-  }
-
   onMounted(() => {
-    syncDinnerPriceFromSession()
+    syncDinnerPriceFromActiveMatch()
     persistState()
   })
 
   const addParticipant = () => {
-    const fallbackName = `참가자 ${appState.value.participants.length + 1}`
+    const fallbackName = `참가자 ${(activeMatch.value?.participants.length ?? 0) + 1}`
     const nextParticipant = createParticipant({
       name: normalizeParticipantName(newParticipantName.value, fallbackName),
       initialHandicap: newParticipantHandicap.value,
     })
 
-    appState.value = {
-      ...appState.value,
-      participants: [...appState.value.participants, nextParticipant],
-    }
+    updateActiveMatch((match) => ({
+      ...match,
+      participants: [...match.participants, nextParticipant],
+    }))
 
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
+    pendingDeleteMatchId.value = null
     newParticipantName.value = ''
     newParticipantHandicap.value = String(DEFAULT_INITIAL_HANDICAP)
     persistState()
   }
 
   const deleteParticipant = (participantId: string) => {
-    if (!appState.value.participants.some((participant) => participant.id === participantId)) {
+    if (!activeMatch.value?.participants.some((participant) => participant.id === participantId)) {
       return
     }
 
     if (pendingDeleteParticipantId.value !== participantId) {
       pendingDeleteParticipantId.value = participantId
-      pendingNewSession.value = false
+      pendingDeleteMatchId.value = null
       return
     }
 
-    const nextParticipants = appState.value.participants.filter((p) => p.id !== participantId)
-    const filteredHistory = appState.value.history.filter(
-      (entry) =>
-        entry.winnerId !== participantId &&
-        entry.loserId !== participantId &&
-        !entry.scores?.some((score) => score.participantId === participantId),
-    )
+    updateActiveMatch((match) => {
+      const nextParticipants = match.participants.filter((participant) => participant.id !== participantId)
+      const filteredHistory = match.history.filter(
+        (entry) =>
+          entry.winnerId !== participantId &&
+          entry.loserId !== participantId &&
+          !entry.scores?.some((score) => score.participantId === participantId),
+      )
 
-    appState.value = {
-      ...appState.value,
-      participants: nextParticipants,
-      history: normalizeRoundHistory(filteredHistory, nextParticipants),
-    }
+      return {
+        ...match,
+        participants: nextParticipants,
+        history: normalizeRoundHistory(filteredHistory, nextParticipants),
+      }
+    })
 
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
+    pendingDeleteMatchId.value = null
     persistState()
   }
 
   const applyRoundResult = () => {
     const summary = getRoundScoreSummary(
-      appState.value.participants,
+      activeMatch.value?.participants ?? [],
       new Map(Object.entries(roundScoreInputs.value)),
     )
 
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
+    pendingDeleteMatchId.value = null
 
     if (!summary.isComplete) {
       flashSaveStatus(summary.message)
@@ -209,122 +271,160 @@ export const useBetBoard = () => {
     }
 
     const courseName = normalizeCourseName(roundCourseName.value)
-    const roundEntry = {
-      round: appState.value.history.length + 1,
-      scores: summary.scores,
-      isDraw: summary.isDraw,
-      loserId: summary.loserId ?? '',
-      winnerId: summary.winnerId ?? '',
-      ...(courseName ? { courseName } : {}),
-    }
 
-    appState.value = {
-      ...appState.value,
-      history: [...appState.value.history, roundEntry],
-    }
+    updateActiveMatch((match) => ({
+      ...match,
+      history: [
+        ...match.history,
+        {
+          round: match.history.length + 1,
+          scores: summary.scores,
+          isDraw: summary.isDraw,
+          loserId: summary.loserId ?? '',
+          winnerId: summary.winnerId ?? '',
+          ...(courseName ? { courseName } : {}),
+        },
+      ],
+    }))
 
-    roundScoreInputs.value = {}
-    roundCourseName.value = ''
+    clearRoundInputs()
     persistState(summary.isDraw ? '동점 라운드 저장됨' : '타수 결과 저장됨')
     playRoundFeedback()
   }
 
   const undoLastResult = () => {
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
-    appState.value = {
-      ...appState.value,
-      history: appState.value.history.slice(0, -1),
-    }
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
+      history: match.history.slice(0, -1),
+    }))
     persistState()
   }
 
   const resetBoard = () => {
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
-    appState.value = {
-      ...appState.value,
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
       history: [],
-      currentSession: {
-        ...appState.value.currentSession,
-        dinnerPrice: DEFAULT_DINNER_PRICE,
-      },
-    }
-    roundScoreInputs.value = {}
-    roundCourseName.value = ''
+      dinnerPrice: DEFAULT_DINNER_PRICE,
+    }))
+    clearRoundInputs()
     dinnerPriceDisplay.value = formatPriceInput(DEFAULT_DINNER_PRICE)
     persistState()
   }
 
-  const startNewSession = () => {
-    if (appState.value.history.length > 0 && !pendingNewSession.value) {
-      pendingDeleteParticipantId.value = null
-      pendingNewSession.value = true
+  const createMatch = (): string | null => {
+    if (appState.value.matches.length >= MAX_MATCHES) {
+      flashSaveStatus(`경기는 최대 ${MAX_MATCHES}개까지`)
+      return null
+    }
+
+    syncDinnerPriceToActiveMatch()
+    pendingDeleteParticipantId.value = null
+    pendingDeleteMatchId.value = null
+
+    const nextMatch = createDefaultMatch()
+    appState.value = {
+      matches: [nextMatch, ...appState.value.matches].slice(0, MAX_MATCHES),
+      activeMatchId: nextMatch.id,
+    }
+
+    syncDinnerPriceFromActiveMatch()
+    clearRoundInputs()
+    newParticipantName.value = ''
+    newParticipantHandicap.value = String(DEFAULT_INITIAL_HANDICAP)
+    persistState('새 경기 생성됨')
+
+    return nextMatch.id
+  }
+
+  const switchMatch = (matchId: string) => {
+    if (matchId === appState.value.activeMatchId) {
       return
     }
 
+    syncDinnerPriceToActiveMatch()
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
+    pendingDeleteMatchId.value = null
     appState.value = {
       ...appState.value,
-      history: [],
-      currentSession: createDefaultSession(),
+      activeMatchId: matchId,
     }
-    roundScoreInputs.value = {}
-    roundCourseName.value = ''
-    dinnerPriceDisplay.value = formatPriceInput(DEFAULT_DINNER_PRICE)
-    persistState()
+    syncDinnerPriceFromActiveMatch()
+    clearRoundInputs()
+    persistState('경기 전환됨')
+  }
+
+  const deleteMatch = (matchId: string) => {
+    if (!appState.value.matches.some((match) => match.id === matchId)) {
+      return
+    }
+
+    if (appState.value.matches.length <= 1) {
+      flashSaveStatus('마지막 경기는 삭제할 수 없습니다')
+      return
+    }
+
+    if (pendingDeleteMatchId.value !== matchId) {
+      pendingDeleteMatchId.value = matchId
+      pendingDeleteParticipantId.value = null
+      return
+    }
+
+    const nextMatches = appState.value.matches.filter((match) => match.id !== matchId)
+    const nextActiveMatchId =
+      appState.value.activeMatchId === matchId ? nextMatches[0].id : appState.value.activeMatchId
+
+    pendingDeleteMatchId.value = null
+    pendingDeleteParticipantId.value = null
+    appState.value = {
+      matches: nextMatches,
+      activeMatchId: nextActiveMatchId,
+    }
+    syncDinnerPriceFromActiveMatch()
+    clearRoundInputs()
+    persistState('경기 삭제됨')
   }
 
   const updateSessionTitle = () => {
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
-    appState.value = {
-      ...appState.value,
-      currentSession: {
-        ...appState.value.currentSession,
-        title: normalizeSessionTitle(appState.value.currentSession.title),
-      },
-    }
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
+      title: normalizeSessionTitle(match.title),
+    }))
     persistState()
   }
 
   const updateSessionDate = () => {
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
-    appState.value = {
-      ...appState.value,
-      currentSession: {
-        ...appState.value.currentSession,
-        date: appState.value.currentSession.date || getTodayDateValue(),
-      },
-    }
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
+      date: match.date || getTodayDateValue(),
+    }))
     persistState()
   }
 
   const updateDinnerPrice = () => {
     dinnerPriceDisplay.value = formatPriceInput(dinnerPriceDisplay.value)
-    appState.value = {
-      ...appState.value,
-      currentSession: {
-        ...appState.value.currentSession,
-        dinnerPrice: dinnerPrice.value,
-      },
-    }
+    updateActiveMatch((match) => ({
+      ...match,
+      dinnerPrice: dinnerPrice.value,
+    }))
     persistState()
   }
 
   const setQuickDinnerPrice = (price: number) => {
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
+    pendingDeleteMatchId.value = null
     const nextDinnerPrice = normalizeDinnerPrice(price)
-    appState.value = {
-      ...appState.value,
-      currentSession: {
-        ...appState.value.currentSession,
-        dinnerPrice: nextDinnerPrice,
-      },
-    }
+    updateActiveMatch((match) => ({
+      ...match,
+      dinnerPrice: nextDinnerPrice,
+    }))
     dinnerPriceDisplay.value = formatPriceInput(nextDinnerPrice)
     persistState()
   }
@@ -333,49 +433,9 @@ export const useBetBoard = () => {
     setQuickDinnerPrice(Math.max(0, dinnerPrice.value + amount))
   }
 
-  const createSavedSessionSnapshot = ({
-    participants,
-    dinnerPrice: price,
-    roundCount,
-  }: {
-    participants: ParticipantWithCost[]
-    dinnerPrice: number
-    roundCount: number
-  }): SavedSession => ({
-    id: createSessionId(),
-    title: normalizeSessionTitle(appState.value.currentSession.title),
-    date: appState.value.currentSession.date || getTodayDateValue(),
-    dinnerPrice: price,
-    participantCount: participants.length,
-    historyLength: roundCount,
-    participants: participants.map((participant) => ({
-      name: participant.name,
-      share: participant.share,
-      cost: participant.cost,
-      handicap: participant.handicap,
-    })),
-    savedAt: new Date().toISOString(),
-  })
-
-  const saveCurrentSession = () => {
-    const snapshot = createSavedSessionSnapshot({
-      participants: participantsWithCosts.value,
-      dinnerPrice: dinnerPrice.value,
-      roundCount: matchState.value.history.length,
-    })
-
-    pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
-    appState.value = {
-      ...appState.value,
-      savedSessions: [snapshot, ...appState.value.savedSessions].slice(0, MAX_SAVED_SESSIONS),
-    }
-    persistState('세션 저장됨')
-  }
-
   const copySettlementSummary = async () => {
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
+    pendingDeleteMatchId.value = null
 
     try {
       await navigator.clipboard.writeText(settlementSummary.value)
@@ -388,39 +448,38 @@ export const useBetBoard = () => {
 
   const swapHistoryResult = (round: number) => {
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
-    appState.value = {
-      ...appState.value,
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
       history: normalizeRoundHistory(
-        appState.value.history.map((entry, index) =>
-          index + 1 === round
-            ? { ...entry, winnerId: entry.loserId, loserId: entry.winnerId }
-            : entry,
+        match.history.map((entry, index) =>
+          index + 1 === round ? { ...entry, winnerId: entry.loserId, loserId: entry.winnerId } : entry,
         ),
-        appState.value.participants,
+        match.participants,
       ),
-    }
+    }))
     persistState()
   }
 
   const deleteHistoryResult = (round: number) => {
     pendingDeleteParticipantId.value = null
-    pendingNewSession.value = false
-    appState.value = {
-      ...appState.value,
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
       history: normalizeRoundHistory(
-        appState.value.history.filter((_, index) => index + 1 !== round),
-        appState.value.participants,
+        match.history.filter((_, index) => index + 1 !== round),
+        match.participants,
       ),
-    }
+    }))
     persistState()
   }
 
-  const getSavedSessionTopParticipant = (session: SavedSession) =>
-    session.participants.reduce(
-      (leader, participant) => (participant.share > leader.share ? participant : leader),
-      session.participants[0],
-    )
+  const getMatchSummaryText = (match: Match) => {
+    const board = buildMatchState(match)
+    const topParticipant = getLeadingParticipant(getParticipantsWithCosts(board, match.dinnerPrice))
+
+    return `${match.participants.length}명 · ${board.history.length}라운드 · 최다 부담 ${topParticipant?.name ?? '-'}`
+  }
 
   const participantStyle = (index: number) => {
     const color = getParticipantColor(index)
@@ -442,8 +501,10 @@ export const useBetBoard = () => {
 
   return {
     appState,
+    activeMatch,
+    matchList,
     pendingDeleteParticipantId,
-    pendingNewSession,
+    pendingDeleteMatchId,
     saveStatusText,
     saveStatusAnimating,
     boardRoundFeedback,
@@ -469,19 +530,20 @@ export const useBetBoard = () => {
     applyRoundResult,
     undoLastResult,
     resetBoard,
-    startNewSession,
+    createMatch,
+    switchMatch,
+    deleteMatch,
     updateSessionTitle,
     updateSessionDate,
     updateDinnerPrice,
     setQuickDinnerPrice,
     adjustDinnerPrice,
-    saveCurrentSession,
     copySettlementSummary,
     swapHistoryResult,
     deleteHistoryResult,
     getScoreInput,
     setScoreInput,
-    getSavedSessionTopParticipant,
+    getMatchSummaryText,
     participantStyle,
     handicapMarkerStyle,
     splitSegmentStyle,
@@ -492,5 +554,6 @@ export const useBetBoard = () => {
     getSessionMetaText,
     getHistoryScoreText,
     MIN_PARTICIPANTS,
+    MAX_MATCHES,
   }
 }

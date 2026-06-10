@@ -1,3 +1,6 @@
 <template>
-  <NuxtPage />
+  <NuxtPwaManifest />
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
 </template>

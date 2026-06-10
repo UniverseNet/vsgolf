@@ -1,8 +1,8 @@
 import type {
-  AppState,
   MatchState,
   Participant,
   ParticipantWithCost,
+  RoundEntry,
   RoundScoreSummary,
   ScoreEntry,
   Session,
@@ -39,8 +39,8 @@ export const getStrokeRoundOutcome = (scores: ScoreEntry[]) => {
   }
 }
 
-export const buildMatchState = (appState: AppState): MatchState => {
-  const participantStates = appState.participants.map((participant, index) => ({
+export const buildMatchState = (board: { participants: Participant[]; history: RoundEntry[] }): MatchState => {
+  const participantStates = board.participants.map((participant, index) => ({
     ...participant,
     colorIndex: index,
     share: DEFAULT_PARTICIPANT_SHARE,
@@ -51,7 +51,7 @@ export const buildMatchState = (appState: AppState): MatchState => {
   const participantStateMap = new Map(participantStates.map((participant) => [participant.id, participant]))
   const history: MatchState['history'] = []
 
-  appState.history.forEach((entry) => {
+  board.history.forEach((entry) => {
     const scores = Array.isArray(entry.scores)
       ? entry.scores
           .map((score) => {

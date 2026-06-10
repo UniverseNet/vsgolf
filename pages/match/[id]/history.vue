@@ -1,0 +1,32 @@
+<script setup lang="ts">
+const route = useRoute()
+const router = useRouter()
+const { appState } = useBetBoardContext()
+
+onMounted(() => {
+  const matchId = route.params.id as string
+
+  if (!appState.value.matches.some((match) => match.id === matchId)) {
+    router.replace('/')
+  }
+})
+</script>
+
+<template>
+  <div class="match-page">
+    <PageIntro
+      eyebrow="History"
+      title="라운드 기록"
+      description="입력한 라운드 결과를 확인하고 수정할 수 있습니다."
+    />
+    <BetBoardHistoryPanel />
+  </div>
+</template>
+
+<style lang="scss" scoped>
+@use '~/assets/css/mixins' as *;
+
+.match-page {
+  @include page-stack;
+}
+</style>
