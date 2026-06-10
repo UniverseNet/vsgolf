@@ -7,8 +7,8 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'static',
     output: {
-      dir: 'dist',
-      publicDir: 'dist',
+      dir: 'docs',
+      publicDir: 'docs',
     },
   },
   devtools: { enabled: true },
