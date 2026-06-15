@@ -1,7 +1,13 @@
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
-const { appState } = useBetBoardContext()
+const { appState, activeMatch, MIN_PARTICIPANTS } = useBetBoardContext()
+
+const canStartRound = computed(() => (activeMatch.value?.participants.length ?? 0) >= MIN_PARTICIPANTS)
+const followUpLink = computed(() =>
+  canStartRound.value ? `/match/${route.params.id}/play` : `/match/${route.params.id}`,
+)
+const followUpLabel = computed(() => (canStartRound.value ? '라운드 입력으로 이동 →' : '경기 개요로 이동 →'))
 
 onMounted(() => {
   const matchId = route.params.id as string
@@ -20,8 +26,8 @@ onMounted(() => {
       description="경기 정보와 참가자를 관리합니다."
     />
     <BetBoardSetupPanel />
-    <NuxtLink :to="`/match/${route.params.id}/history`" class="history-link">
-      라운드 기록 보기 →
+    <NuxtLink :to="followUpLink" class="history-link">
+      {{ followUpLabel }}
     </NuxtLink>
   </div>
 </template>

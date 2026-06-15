@@ -11,6 +11,27 @@ const {
   MAX_MATCHES,
 } = useBetBoardContext()
 
+const draftMatch = computed(() =>
+  matchList.value.find((match) => match.participants.length === 0 && match.history.length === 0),
+)
+
+const primaryActionLabel = computed(() => (draftMatch.value ? '첫 경기 설정하기' : '새 경기 시작'))
+
+const guideSteps = [
+  {
+    title: '참가자와 핸디 설정',
+    description: '경기 이름을 정하고 최소 2명의 참가자와 시작 핸디를 입력합니다.',
+  },
+  {
+    title: '라운드 타수 입력',
+    description: '각 라운드가 끝날 때 참가자별 실제 타수를 기록합니다.',
+  },
+  {
+    title: '부담 비율과 정산 확인',
+    description: '최저타와 최고타 기준으로 누적 부담과 예상 결제 금액을 확인합니다.',
+  },
+] as const
+
 const deleteLabel = (matchId: string) =>
   pendingDeleteMatchId.value === matchId ? '삭제 확인' : '삭제'
 
@@ -19,6 +40,11 @@ const openMatch = (matchId: string) => {
 }
 
 const onCreateMatch = () => {
+  if (draftMatch.value) {
+    router.push(`/match/${draftMatch.value.id}/setup`)
+    return
+  }
+
   const matchId = createMatch()
 
   if (matchId) {
@@ -33,11 +59,27 @@ const onCreateMatch = () => {
       <p class="home-hero__eyebrow">Screen Golf Dinner Bet</p>
       <h1 class="home-hero__title">저녁내기 보드</h1>
       <p class="home-hero__description">
-        여러 경기를 만들고, 라운드별 부담과 정산을 한곳에서 관리하세요.
+        처음이라면 경기 설정부터 시작하세요. 참가자, 라운드 타수, 정산까지 한 흐름으로
+        이어집니다.
       </p>
       <button class="home-hero__cta" type="button" @click="onCreateMatch">
-        새 경기 시작
+        {{ primaryActionLabel }}
       </button>
+    </section>
+
+    <section class="home-guide" aria-labelledby="homeGuideTitle">
+      <div class="home-guide__header">
+        <p>Quick Start</p>
+        <h2 id="homeGuideTitle">오늘 경기 진행 순서</h2>
+      </div>
+
+      <ol class="home-guide__steps">
+        <li v-for="(step, index) in guideSteps" :key="step.title" class="home-guide__step">
+          <span class="home-guide__index">{{ index + 1 }}</span>
+          <strong>{{ step.title }}</strong>
+          <p>{{ step.description }}</p>
+        </li>
+      </ol>
     </section>
 
     <section class="home-matches" aria-label="경기 목록">
@@ -144,6 +186,75 @@ const onCreateMatch = () => {
   }
 }
 
+.home-guide {
+  @include panel-surface;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+
+  &__header {
+    display: grid;
+    gap: 4px;
+
+    p {
+      @include eyebrow-text;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.12rem;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+  }
+
+  &__steps {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 10px;
+    align-items: start;
+    padding: 12px;
+    border: 1px solid rgba(34, 58, 50, 0.1);
+    border-radius: var(--radius-sm);
+    background: var(--surface-muted);
+
+    strong {
+      font-size: 0.92rem;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    p {
+      grid-column: 2;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+  }
+
+  &__index {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--teal), var(--mint));
+  }
+}
+
 .home-empty {
   padding: 28px 16px;
   border: 1px dashed var(--border-strong);
@@ -235,6 +346,23 @@ const onCreateMatch = () => {
 
   .home-matches {
     gap: 14px;
+  }
+
+  .home-guide {
+    padding: 18px;
+
+    &__steps {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    &__step {
+      grid-template-columns: 1fr;
+      gap: 8px;
+
+      p {
+        grid-column: auto;
+      }
+    }
   }
 
   .match-card {

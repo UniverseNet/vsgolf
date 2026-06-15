@@ -20,16 +20,8 @@ onMounted(() => {
       description="현재 부담 비율과 진행 상황을 한눈에 확인하세요."
     />
 
+    <BetBoardProgressGuide />
     <BetBoardDashboard />
-
-    <section class="quick-links">
-      <NuxtLink :to="`/match/${route.params.id}/play`" class="quick-link quick-link--primary">
-        라운드 입력
-      </NuxtLink>
-      <NuxtLink :to="`/match/${route.params.id}/history`" class="quick-link">
-        기록 보기
-      </NuxtLink>
-    </section>
   </div>
 </template>
 
@@ -44,26 +36,4 @@ onMounted(() => {
   }
 }
 
-.quick-links {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.quick-link {
-  display: grid;
-  place-items: center;
-  min-height: 48px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 700;
-  background: var(--surface);
-
-  &--primary {
-    color: #fff;
-    border-color: transparent;
-    background: linear-gradient(135deg, var(--teal), var(--mint));
-  }
-}
 </style>
