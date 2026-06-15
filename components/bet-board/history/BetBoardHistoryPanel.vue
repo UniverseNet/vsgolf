@@ -47,4 +47,11 @@ const { reversedHistory, swapHistoryResult, deleteHistoryResult } = useBetBoardC
     content: '아직 입력된 결과가 없습니다';
   }
 }
+
+@media (min-width: 1024px) {
+  .history-list {
+    max-height: 540px;
+    gap: 10px;
+  }
+}
 </style>

@@ -108,4 +108,10 @@ const { matchState, participantsWithCosts } = useBetBoardContext()
     grid-template-columns: 1fr;
   }
 }
+
+@media (min-width: 1024px) {
+  .handicap-panel {
+    padding: 20px;
+  }
+}
 </style>

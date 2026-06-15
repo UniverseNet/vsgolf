@@ -123,7 +123,7 @@ const isActiveTab = (to: string, exact = false) => {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
-    width: min(100%, calc(var(--page-max) + 28px));
+    width: min(100%, 920px);
     min-height: 72px;
     padding: 10px;
     border: 1px solid rgba(247, 242, 231, 0.12);
@@ -263,7 +263,7 @@ const isActiveTab = (to: string, exact = false) => {
       justify-items: start;
       align-content: center;
       min-height: 54px;
-      padding: 9px 12px;
+      padding: 9px 14px;
       gap: 9px;
       border-radius: 18px;
     }

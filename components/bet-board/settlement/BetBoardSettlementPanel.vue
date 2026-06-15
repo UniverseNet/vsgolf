@@ -191,4 +191,20 @@ const {
     font-size: 0.84rem;
   }
 }
+
+@media (min-width: 1024px) {
+  .settlement-grid {
+    gap: 12px;
+  }
+
+  .settlement-card {
+    min-height: 104px;
+    padding: 16px;
+  }
+
+  .settlement-participants {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+  }
+}
 </style>

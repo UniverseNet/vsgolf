@@ -30,4 +30,15 @@ onMounted(() => {
 .match-page {
   @include page-stack;
 }
+
+@media (min-width: 1024px) {
+  .match-page {
+    grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+    align-items: start;
+
+    :deep(.page-intro) {
+      grid-column: 1 / -1;
+    }
+  }
+}
 </style>

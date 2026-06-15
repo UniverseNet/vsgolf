@@ -246,4 +246,18 @@ const {
     grid-template-columns: 1fr;
   }
 }
+
+@media (min-width: 1024px) {
+  .split-panel {
+    padding: 20px;
+  }
+
+  .split-bar {
+    height: 52px;
+  }
+
+  .amount-grid--participants {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 </style>

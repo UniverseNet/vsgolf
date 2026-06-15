@@ -142,4 +142,31 @@ const goBack = () => {
     }
   }
 }
+
+@media (min-width: 1024px) {
+  .app-header {
+    &__inner {
+      gap: 16px;
+    }
+
+    &__back {
+      width: 40px;
+      height: 40px;
+    }
+
+    &__logo {
+      font-size: 1.28rem;
+    }
+
+    &__title {
+      font-size: 1.12rem;
+    }
+
+    &__status {
+      min-height: 34px;
+      padding: 0 12px;
+      font-size: 0.8rem;
+    }
+  }
+}
 </style>

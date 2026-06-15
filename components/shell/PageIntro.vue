@@ -42,4 +42,19 @@ defineProps<{
     line-height: 1.5;
   }
 }
+
+@media (min-width: 1024px) {
+  .page-intro {
+    gap: 10px;
+
+    &__title {
+      font-size: 1.9rem;
+    }
+
+    &__description {
+      max-width: 640px;
+      font-size: 1rem;
+    }
+  }
+}
 </style>

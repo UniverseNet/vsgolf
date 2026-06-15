@@ -73,4 +73,8 @@
   display: grid;
   gap: 16px;
   animation: board-fade-in 420ms var(--ease-out) both;
+
+  @media (min-width: 1024px) {
+    gap: 20px;
+  }
 }

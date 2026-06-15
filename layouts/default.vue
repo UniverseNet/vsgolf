@@ -45,4 +45,16 @@ watch(
     padding-bottom: calc(var(--shell-nav-h) + 24px);
   }
 }
+
+@media (min-width: 1024px) {
+  .app-shell {
+    &__main {
+      padding-top: calc(var(--shell-header-h) + 24px);
+    }
+
+    &--match &__main {
+      padding-bottom: calc(var(--shell-nav-h) + 34px);
+    }
+  }
+}
 </style>

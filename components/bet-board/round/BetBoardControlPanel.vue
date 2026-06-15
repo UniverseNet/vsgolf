@@ -245,4 +245,24 @@ const onScoreInput = (participantId: string, event: Event) => {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+@media (min-width: 1024px) {
+  .control-panel {
+    gap: 16px;
+  }
+
+  .score-input-list {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+  }
+
+  .score-input-item {
+    min-height: 104px;
+    padding: 14px;
+  }
+
+  .control-actions {
+    grid-template-columns: minmax(240px, 1.4fr) repeat(2, minmax(160px, 1fr));
+  }
+}
 </style>

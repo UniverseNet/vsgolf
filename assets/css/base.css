@@ -212,3 +212,12 @@ a {
     animation-iteration-count: 1 !important;
   }
 }
+
+@media (min-width: 1024px) {
+  :root {
+    --shell-header-h: 64px;
+    --shell-nav-h: 104px;
+    --page-gutter: 32px;
+    --page-max: 1120px;
+  }
+}

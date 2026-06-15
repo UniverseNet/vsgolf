@@ -29,4 +29,12 @@ onMounted(() => {
 .match-page {
   @include page-stack;
 }
+
+@media (min-width: 1024px) {
+  .match-page {
+    :deep(.settlement-panel) {
+      padding: 20px;
+    }
+  }
+}
 </style>

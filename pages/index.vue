@@ -210,4 +210,41 @@ const onCreateMatch = () => {
   font-weight: 700;
   background: var(--coral-soft);
 }
+
+@media (min-width: 1024px) {
+  .home-page {
+    grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
+    align-items: start;
+    gap: 24px;
+  }
+
+  .home-hero {
+    position: sticky;
+    top: calc(var(--shell-header-h) + 24px);
+    min-height: 320px;
+    padding: 30px;
+
+    &__title {
+      font-size: 2.25rem;
+    }
+
+    &__description {
+      font-size: 1rem;
+    }
+  }
+
+  .home-matches {
+    gap: 14px;
+  }
+
+  .match-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 16px;
+  }
+
+  .match-card__delete {
+    justify-self: end;
+  }
+}
 </style>

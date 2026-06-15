@@ -39,4 +39,12 @@ onMounted(() => {
   font-size: 0.88rem;
   font-weight: 700;
 }
+
+@media (min-width: 1024px) {
+  .match-page {
+    :deep(.setup-panel) {
+      padding: 20px;
+    }
+  }
+}
 </style>

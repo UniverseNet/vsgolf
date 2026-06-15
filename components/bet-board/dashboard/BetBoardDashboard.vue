@@ -71,4 +71,19 @@ const { matchState, lowestBurdenParticipant, leadingParticipant, leaderText, low
     grid-template-columns: 1fr;
   }
 }
+
+@media (min-width: 1024px) {
+  .dashboard {
+    gap: 14px;
+  }
+
+  .metric {
+    min-height: 128px;
+    padding: 20px;
+  }
+
+  .metric__value {
+    font-size: 2rem;
+  }
+}
 </style>
