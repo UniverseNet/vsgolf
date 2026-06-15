@@ -43,7 +43,7 @@ export default defineNuxtConfig({
     },
   },
   modules: ['@vite-pwa/nuxt'],
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   components: [
     {
       path: '~/components/bet-board',
@@ -134,7 +134,7 @@ export default defineNuxtConfig({
       periodicSyncForUpdates: 3600,
     },
     devOptions: {
-      enabled: true,
+      enabled: false,
       type: 'module',
     },
   },
