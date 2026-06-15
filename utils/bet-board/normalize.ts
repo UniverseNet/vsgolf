@@ -22,6 +22,11 @@ import {
 } from './constants'
 import { getStrokeRoundOutcome } from './match'
 
+type LegacyResultEntry = {
+  round: number
+  result: 'win' | 'lose'
+}
+
 export const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
 
 export const createParticipantId = () => `participant-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -197,12 +202,12 @@ const normalizeStoredParticipants = (storedParticipants: unknown): Participant[]
   }, [])
 }
 
-const normalizeStoredResultHistory = (storedHistory: unknown) => {
+const normalizeStoredResultHistory = (storedHistory: unknown): LegacyResultEntry[] => {
   if (!Array.isArray(storedHistory)) {
     return []
   }
 
-  return storedHistory.reduce<Array<{ round: number; result: 'win' | 'lose' }>>((normalizedHistory, entry) => {
+  return storedHistory.reduce<LegacyResultEntry[]>((normalizedHistory, entry) => {
     if (!entry || typeof entry !== 'object') {
       return normalizedHistory
     }
@@ -233,7 +238,7 @@ const normalizeStoredLegacyOpponents = (storedOpponents: unknown) => {
       id: string
       name: string
       initialHandicap: number
-      history: Array<{ round: number; result: 'win' | 'lose' }>
+      history: LegacyResultEntry[]
     }>
   >((normalizedOpponents, opponent, index) => {
     if (!opponent || typeof opponent !== 'object') {
@@ -465,7 +470,7 @@ const normalizeStoredMatches = (storedMatches: unknown): Match[] => {
     .slice(0, MAX_MATCHES)
 }
 
-const createDefaultAppState = (history: RoundEntry[] = []): AppState => {
+const createDefaultAppState = (history: unknown = []): AppState => {
   const match = createDefaultMatch({
     history: normalizeRoundHistory(history, []),
   })
@@ -482,7 +487,7 @@ const createMatchFromLegacyBoard = ({
   session,
 }: {
   participants: Participant[]
-  history: RoundEntry[]
+  history: unknown
   session: Session
 }): Match => ({
   id: session.id,
@@ -499,7 +504,7 @@ const migrateLegacyBoardState = (parsedValue: Record<string, unknown>): AppState
 
   if (legacyOpponents.length === 0) {
     const legacyHistory = Array.isArray(parsedValue?.history) ? parsedValue.history : []
-    return createDefaultAppState(legacyHistory as RoundEntry[])
+    return createDefaultAppState(legacyHistory)
   }
 
   const activeOpponent =
@@ -531,7 +536,7 @@ const migrateSingleBoardState = (parsedValue: Record<string, unknown>): AppState
   const session = normalizeStoredSession(parsedValue.currentSession)
   const match = createMatchFromLegacyBoard({
     participants,
-    history: parsedValue.history as RoundEntry[],
+    history: parsedValue.history,
     session,
   })
 

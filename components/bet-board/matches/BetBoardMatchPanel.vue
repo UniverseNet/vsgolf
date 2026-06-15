@@ -13,7 +13,7 @@ const {
   MAX_MATCHES,
 } = useBetBoardContext()
 
-const isActiveMatch = (match: Match) => match.id === appState.activeMatchId
+const isActiveMatch = (match: Match) => match.id === appState.value.activeMatchId
 
 const deleteLabel = (matchId: string) =>
   pendingDeleteMatchId.value === matchId ? '삭제 확인' : '삭제'

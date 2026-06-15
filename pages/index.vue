@@ -22,7 +22,7 @@ const onCreateMatch = () => {
   const matchId = createMatch()
 
   if (matchId) {
-    router.push(`/match/${matchId}`)
+    router.push(`/match/${matchId}/setup`)
   }
 }
 </script>
