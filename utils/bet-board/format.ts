@@ -1,4 +1,4 @@
-import type { ParticipantWithCost, Session } from '~/types/bet-board'
+import type { ParticipantWithCost, RoundScoreDetail, Session } from '~/types/bet-board'
 
 export const currencyFormatter = new Intl.NumberFormat('ko-KR', {
   maximumFractionDigits: 0,
@@ -101,5 +101,38 @@ export const getHandicapDeltaText = (participant: ParticipantWithCost) => {
 }
 
 export const getHistoryScoreText = (
-  scores: Array<{ participantName: string; strokes: number }>,
-) => scores.map((score) => `${score.participantName} ${score.strokes}타`).join(' · ')
+  scores: Array<Pick<RoundScoreDetail, 'participantName' | 'strokes' | 'adjustedStrokes'>>,
+) =>
+  scores
+    .map((score) => {
+      if (typeof score.adjustedStrokes !== 'number') {
+        return `${score.participantName} ${score.strokes}타`
+      }
+
+      const adjustedText = Number.isInteger(score.adjustedStrokes)
+        ? score.adjustedStrokes
+        : score.adjustedStrokes.toFixed(1)
+
+      return `${score.participantName} ${score.strokes}타(보정 ${adjustedText})`
+    })
+    .join(' · ')
+
+export const getHistoryAdjustmentText = (scores: RoundScoreDetail[]) => {
+  const changedScores = scores.filter((score) => typeof score.shareDelta === 'number' && score.shareDelta !== 0)
+
+  if (changedScores.length === 0) {
+    return '부담 변화 없음'
+  }
+
+  return changedScores
+    .map((score) => {
+      const deltaText = score.shareDelta! > 0 ? `+${score.shareDelta}` : String(score.shareDelta)
+      const handicapText =
+        typeof score.handicapDelta === 'number' && score.handicapDelta !== 0
+          ? ` · 핸디 ${score.handicapDelta > 0 ? `+${score.handicapDelta}` : score.handicapDelta}`
+          : ''
+
+      return `${score.participantName} ${deltaText}점${handicapText}`
+    })
+    .join(' · ')
+}

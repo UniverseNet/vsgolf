@@ -1,3 +1,5 @@
+export type RoundRule = 'stroke-extremes' | 'field-average'
+
 export interface Participant {
   id: string
   name: string
@@ -16,11 +18,23 @@ export interface ScoreEntry {
   strokes: number
 }
 
+export interface RoundScoreDetail extends ScoreEntry {
+  participantName: string
+  handicapBefore?: number
+  adjustedStrokes?: number
+  differenceFromAverage?: number
+  shareDelta?: number
+  shareAfter?: number
+  handicapDelta?: number
+  handicapAfter?: number
+}
+
 export interface RoundEntry {
   round: number
   scores?: ScoreEntry[]
   isDraw?: boolean
   loserId: string
+  rule?: RoundRule
   winnerId: string
   courseName?: string
 }
@@ -36,16 +50,14 @@ export interface ParticipantState extends Participant {
 export interface ScoredRoundHistoryEntry {
   round: number
   isDraw: boolean
+  rule?: RoundRule
   courseName?: string
   loserId: string
   loserName: string
   loserShare: number
   loserHandicap: number
-  scores: Array<{
-    participantId: string
-    participantName: string
-    strokes: number
-  }>
+  averageAdjustedStrokes?: number
+  scores: RoundScoreDetail[]
   winnerId: string
   winnerName: string
   winnerShare: number
@@ -94,8 +106,11 @@ export interface RoundScoreSummary {
   isComplete: boolean
   isDraw?: boolean
   loserId?: string
-  winnerId?: string
   message: string
+  rule?: RoundRule
+  averageAdjustedStrokes?: number
+  adjustments?: RoundScoreDetail[]
+  winnerId?: string
   scores?: ScoreEntry[]
 }
 

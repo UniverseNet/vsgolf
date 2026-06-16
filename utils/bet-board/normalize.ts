@@ -19,6 +19,8 @@ import {
   MAX_MATCHES,
   MAX_SAVED_SESSIONS,
   MIN_PARTICIPANTS,
+  ROUND_RULE_FIELD_AVERAGE,
+  ROUND_RULE_STROKE_EXTREMES,
 } from './constants'
 import { getStrokeRoundOutcome } from './match'
 
@@ -107,6 +109,9 @@ export const normalizeStroke = (stroke: unknown): number | null => {
 
   return roundedStroke
 }
+
+export const normalizeRoundRule = (rule: unknown) =>
+  rule === ROUND_RULE_FIELD_AVERAGE ? ROUND_RULE_FIELD_AVERAGE : ROUND_RULE_STROKE_EXTREMES
 
 export const normalizeScoreEntries = (scores: unknown, participantIds: Set<string>): ScoreEntry[] => {
   if (!Array.isArray(scores)) {
@@ -283,9 +288,11 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
       loserId?: string
       isDraw?: boolean
       courseName?: string
+      rule?: string
     }
 
     const courseName = normalizeCourseName(e.courseName)
+    const rule = normalizeRoundRule(e.rule)
     const withCourseName = <T extends RoundEntry>(roundEntry: T) =>
       courseName ? { ...roundEntry, courseName } : roundEntry
 
@@ -306,6 +313,7 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
           scores,
           isDraw: outcome.isDraw,
           loserId: outcome.loserId,
+          rule,
           winnerId: outcome.winnerId,
         }),
       ]
@@ -321,6 +329,7 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
           round: normalizedHistory.length + 1,
           winnerId,
           loserId,
+          rule: ROUND_RULE_STROKE_EXTREMES,
         }),
       ]
     }
@@ -341,6 +350,7 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
         round: normalizedHistory.length + 1,
         winnerId: e.winnerId,
         loserId: e.loserId,
+        rule,
       }),
     ]
   }, [])
@@ -549,7 +559,7 @@ const migrateSingleBoardState = (parsedValue: Record<string, unknown>): AppState
 const normalizeStoredAppState = (storedValue: string): AppState => {
   const parsedValue = JSON.parse(storedValue) as Record<string, unknown>
 
-  if (parsedValue?.version === APP_VERSION) {
+  if (parsedValue?.version === APP_VERSION || parsedValue?.version === 6) {
     const matches = normalizeStoredMatches(parsedValue.matches)
 
     if (matches.length === 0) {
@@ -615,7 +625,10 @@ export const serializeAppState = (state: AppState) =>
         name: participant.name,
         initialHandicap: participant.initialHandicap,
       })),
-      history: normalizeRoundHistory(match.history, match.participants),
+      history: normalizeRoundHistory(match.history, match.participants).map((entry) => ({
+        ...entry,
+        rule: normalizeRoundRule(entry.rule),
+      })),
       updatedAt: match.updatedAt,
     })),
   })

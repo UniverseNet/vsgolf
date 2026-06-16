@@ -16,12 +16,20 @@ const { matchState, participantsWithCosts } = useBetBoardContext()
 
     <div class="rule-grid" aria-label="조정 규칙">
       <article class="rule-grid__item rule-grid__item--win">
-        <span>최저타는</span>
+        <span>평균보다 3~5타 좋음</span>
         <strong>부담 -1점 · 핸디 -1</strong>
       </article>
       <article class="rule-grid__item rule-grid__item--lose">
-        <span>최고타는</span>
+        <span>평균보다 6타 이상 좋음</span>
+        <strong>부담 -2점 · 핸디 -2</strong>
+      </article>
+      <article class="rule-grid__item rule-grid__item--warn">
+        <span>평균보다 3~5타 나쁨</span>
         <strong>부담 +1점 · 핸디 +1</strong>
+      </article>
+      <article class="rule-grid__item rule-grid__item--lose">
+        <span>평균보다 6타 이상 나쁨</span>
+        <strong>부담 +2점 · 핸디 +2</strong>
       </article>
     </div>
   </section>
@@ -94,6 +102,11 @@ const { matchState, participantsWithCosts } = useBetBoardContext()
   &--lose {
     border-color: rgba(211, 95, 77, 0.22);
     background: linear-gradient(135deg, var(--coral-soft), rgba(255, 255, 255, 0.7));
+  }
+
+  &--warn {
+    border-color: rgba(199, 147, 53, 0.22);
+    background: linear-gradient(135deg, var(--brass-soft), rgba(255, 255, 255, 0.7));
   }
 }
 

@@ -23,7 +23,7 @@ const roundGuideTitle = computed(() =>
 )
 const roundGuideDescription = computed(() =>
   hasRequiredParticipants.value
-    ? '라운드가 끝날 때 참가자별 실제 타수를 입력하세요. 최저타는 부담이 줄고 최고타는 부담이 늘어납니다.'
+    ? '라운드가 끝날 때 참가자별 실제 타수를 입력하세요. 현재 핸디를 뺀 보정 타수가 평균보다 좋거나 나쁘면 부담과 핸디가 함께 조정됩니다.'
     : `최소 ${MIN_PARTICIPANTS}명을 추가해야 라운드 결과 입력이 가능합니다.`,
 )
 
@@ -62,7 +62,7 @@ const onScoreInput = (participantId: string, event: Event) => {
     <div class="score-entry-panel" aria-labelledby="scoreInputTitle">
       <div class="score-entry-panel__header">
         <strong id="scoreInputTitle">타수 입력</strong>
-        <span>최저타 -1 · 최고타 +1</span>
+        <span>평균 대비 3타 ±1 · 6타 ±2</span>
       </div>
       <div class="score-input-list" aria-labelledby="scoreInputTitle">
         <p v-if="participantsWithCosts.length === 0" class="score-input-empty">

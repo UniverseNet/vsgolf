@@ -1,13 +1,17 @@
 import type { AppState, Match, ParticipantWithCost } from '~/types/bet-board'
-import { MAX_MATCHES, MIN_PARTICIPANTS, STORAGE_KEY } from '~/utils/bet-board/constants'
 import {
   DEFAULT_DINNER_PRICE,
   DEFAULT_INITIAL_HANDICAP,
+  MAX_MATCHES,
+  MIN_PARTICIPANTS,
+  ROUND_RULE_FIELD_AVERAGE,
+  STORAGE_KEY,
 } from '~/utils/bet-board/constants'
 import {
   formatDateText,
   formatPriceInput,
   formatWon,
+  getHistoryAdjustmentText,
   getHistoryScoreText,
   getLeaderText,
   getLeadingParticipant,
@@ -105,7 +109,7 @@ export const useBetBoard = () => {
 
   const roundPreviewText = computed(() =>
     getRoundScoreSummary(
-      activeMatch.value?.participants ?? [],
+      matchState.value.participants,
       new Map(Object.entries(roundScoreInputs.value)),
     ).message,
   )
@@ -258,7 +262,7 @@ export const useBetBoard = () => {
 
   const applyRoundResult = () => {
     const summary = getRoundScoreSummary(
-      activeMatch.value?.participants ?? [],
+      matchState.value.participants,
       new Map(Object.entries(roundScoreInputs.value)),
     )
 
@@ -281,6 +285,7 @@ export const useBetBoard = () => {
           scores: summary.scores,
           isDraw: summary.isDraw,
           loserId: summary.loserId ?? '',
+          rule: summary.rule ?? ROUND_RULE_FIELD_AVERAGE,
           winnerId: summary.winnerId ?? '',
           ...(courseName ? { courseName } : {}),
         },
@@ -288,7 +293,7 @@ export const useBetBoard = () => {
     }))
 
     clearRoundInputs()
-    persistState(summary.isDraw ? '동점 라운드 저장됨' : '타수 결과 저장됨')
+    persistState(summary.isDraw ? '평균권 라운드 저장됨' : '평균 룰 저장됨')
     playRoundFeedback()
   }
 
@@ -553,6 +558,7 @@ export const useBetBoard = () => {
     formatDateText,
     getSessionMetaText,
     getHistoryScoreText,
+    getHistoryAdjustmentText,
     MIN_PARTICIPANTS,
     MAX_MATCHES,
   }

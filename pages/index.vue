@@ -28,7 +28,7 @@ const guideSteps = [
   },
   {
     title: '부담 비율과 정산 확인',
-    description: '최저타와 최고타 기준으로 누적 부담과 예상 결제 금액을 확인합니다.',
+    description: '평균 보정 타수 기준으로 누적 부담과 예상 결제 금액을 확인합니다.',
   },
 ] as const
 

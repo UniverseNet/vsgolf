@@ -36,7 +36,7 @@ const panelDescription = computed(() => {
   }
 
   if (!hasRoundHistory.value) {
-    return '각 참가자의 실제 타수를 모두 입력하면 최저타와 최고타 기준으로 부담 점수가 누적됩니다.'
+    return '각 참가자의 실제 타수를 모두 입력하면 현재 핸디를 뺀 평균 보정 타수 기준으로 부담 점수가 누적됩니다.'
   }
 
   return '현재까지 입력한 라운드를 기준으로 부담 비율, 핸디 변화, 예상 결제 금액을 확인하세요.'

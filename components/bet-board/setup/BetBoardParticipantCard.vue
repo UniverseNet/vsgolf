@@ -22,7 +22,7 @@ const deleteLabel = computed(() =>
   <article class="participant-card" :style="participantStyle(index)">
     <div class="participant-card__main">
       <strong>{{ participant.name }}</strong>
-      <span>{{ participant.wins }}승 {{ participant.losses }}패 · 핸디 +{{ participant.handicap }}</span>
+      <span>이득 {{ participant.wins }}R · 부담 {{ participant.losses }}R · 핸디 +{{ participant.handicap }}</span>
       <span class="participant-card__share">
         부담 {{ participant.share }}점 · {{ participant.percent.toFixed(1) }}%
       </span>

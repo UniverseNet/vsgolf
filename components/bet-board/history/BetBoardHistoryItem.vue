@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ScoredRoundHistoryEntry } from '~/types/bet-board'
+import { ROUND_RULE_FIELD_AVERAGE } from '~/utils/bet-board/constants'
 import { formatRoundCourseText } from '~/utils/bet-board/format'
 
 const props = defineProps<{
@@ -12,11 +13,16 @@ const emit = defineEmits<{
   delete: [round: number]
 }>()
 
-const { getHistoryScoreText } = useBetBoardContext()
+const { getHistoryScoreText, getHistoryAdjustmentText } = useBetBoardContext()
 
 const hasScores = computed(() => props.entry.scores.length > 0)
+const isFieldAverageRule = computed(() => props.entry.rule === ROUND_RULE_FIELD_AVERAGE)
 
 const resultText = computed(() => {
+  if (hasScores.value && isFieldAverageRule.value) {
+    return props.entry.isDraw ? '평균권 라운드' : '평균 기준 조정'
+  }
+
   if (hasScores.value) {
     return props.entry.isDraw ? '동점 라운드' : `${props.entry.winnerName} 최저타`
   }
@@ -29,6 +35,15 @@ const courseText = computed(() => formatRoundCourseText(props.entry.courseName))
 const detailText = computed(() => {
   const coursePrefix = courseText.value ? `${courseText.value} · ` : ''
 
+  if (hasScores.value && isFieldAverageRule.value) {
+    const averageText =
+      typeof props.entry.averageAdjustedStrokes === 'number'
+        ? `평균 보정 ${props.entry.averageAdjustedStrokes.toFixed(1)}타 · `
+        : ''
+
+    return `${coursePrefix}${averageText}${getHistoryScoreText(props.entry.scores)}`
+  }
+
   if (hasScores.value) {
     return `${coursePrefix}${getHistoryScoreText(props.entry.scores)}`
   }
@@ -39,6 +54,10 @@ const detailText = computed(() => {
 })
 
 const stateText = computed(() => {
+  if (hasScores.value && isFieldAverageRule.value) {
+    return getHistoryAdjustmentText(props.entry.scores)
+  }
+
   if (hasScores.value) {
     return props.entry.isDraw
       ? '부담 변화 없음'
