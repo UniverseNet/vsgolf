@@ -19,6 +19,7 @@ onMounted(() => {
       title="라운드 입력"
       description="참가자 타수를 입력하고 이번 라운드 결과를 저장하세요."
     />
+    <BetBoardMyStatusPanel />
     <BetBoardControlPanel />
   </div>
 </template>

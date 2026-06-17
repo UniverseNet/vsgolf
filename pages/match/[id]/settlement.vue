@@ -19,6 +19,7 @@ onMounted(() => {
       title="최종 정산"
       description="참가자별 예상 결제 금액과 정산 요약입니다."
     />
+    <BetBoardMyStatusPanel />
     <BetBoardSettlementPanel />
   </div>
 </template>

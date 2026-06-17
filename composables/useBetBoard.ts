@@ -3,11 +3,13 @@ import type {
   Match,
   PartialRoundPolicy,
   ParticipantWithCost,
+  ScoredRoundHistoryEntry,
   RoundCompletionStatus,
 } from '~/types/bet-board'
 import {
   DEFAULT_DINNER_PRICE,
   DEFAULT_INITIAL_HANDICAP,
+  DEFAULT_PARTICIPANT_SHARE,
   MAX_MATCHES,
   MIN_PARTICIPANTS,
   PARTIAL_ROUND_POLICY_PRORATE,
@@ -51,6 +53,25 @@ import {
   normalizeSessionTitle,
   serializeAppState,
 } from '~/utils/bet-board/normalize'
+
+interface ParticipantRoundChange {
+  round: number
+  label: string
+  strokes?: number
+  adjustedStrokes?: number
+  shareDelta: number
+  handicapDelta: number
+  costDelta: number
+}
+
+interface MyParticipantSummary {
+  participant: ParticipantWithCost
+  initialCost: number
+  costDelta: number
+  shareDelta: number
+  handicapDelta: number
+  latestChange: ParticipantRoundChange | null
+}
 
 export const useBetBoard = () => {
   const appState = ref<AppState>(loadStoredAppState())
@@ -134,6 +155,24 @@ export const useBetBoard = () => {
   )
 
   const participantsWithCosts = computed(() => getParticipantsWithCosts(matchState.value, dinnerPrice.value))
+  const myParticipantId = computed(() => {
+    const match = activeMatch.value
+
+    if (!match) {
+      return ''
+    }
+
+    const savedParticipantId =
+      typeof match.myParticipantId === 'string' &&
+      participantsWithCosts.value.some((participant) => participant.id === match.myParticipantId)
+        ? match.myParticipantId
+        : ''
+
+    return savedParticipantId || participantsWithCosts.value[0]?.id || ''
+  })
+  const myParticipant = computed(
+    () => participantsWithCosts.value.find((participant) => participant.id === myParticipantId.value) ?? null,
+  )
   const leadingParticipant = computed(() => getLeadingParticipant(participantsWithCosts.value))
   const lowestBurdenParticipant = computed(() => getLowestBurdenParticipant(participantsWithCosts.value))
   const shareRatioText = computed(() => getShareRatioText(participantsWithCosts.value))
@@ -183,6 +222,114 @@ export const useBetBoard = () => {
   })
 
   const reversedHistory = computed(() => [...matchState.value.history].reverse())
+  const getParticipantCostFromShares = (
+    participantId: string,
+    shares: Array<{ id: string; share: number }>,
+  ) => {
+    const totalShare = shares.reduce((total, participant) => total + participant.share, 0) || 1
+    let allocatedCost = 0
+
+    return shares.reduce((participantCost, participant, index) => {
+      const isLastParticipant = index === shares.length - 1
+      const cost = isLastParticipant
+        ? Math.max(0, dinnerPrice.value - allocatedCost)
+        : Math.round(dinnerPrice.value * (participant.share / totalShare))
+
+      allocatedCost += cost
+
+      return participant.id === participantId ? cost : participantCost
+    }, 0)
+  }
+
+  const getRoundParticipantChange = (
+    entry: ScoredRoundHistoryEntry,
+    participantId: string,
+  ): ParticipantRoundChange => {
+    const score = entry.scores.find((roundScore) => roundScore.participantId === participantId)
+    const hasDetailedShares = entry.scores.every(
+      (roundScore) => typeof roundScore.shareAfter === 'number',
+    )
+    const label =
+      entry.completionStatus === ROUND_COMPLETION_STATUS_PARTIAL
+        ? `${entry.holesPlayed}홀 부분 반영`
+        : `${entry.round}R 반영`
+
+    if (score && hasDetailedShares) {
+      const beforeShares = entry.scores.map((roundScore) => ({
+        id: roundScore.participantId,
+        share: Math.max(0, (roundScore.shareAfter ?? DEFAULT_PARTICIPANT_SHARE) - (roundScore.shareDelta ?? 0)),
+      }))
+      const afterShares = entry.scores.map((roundScore) => ({
+        id: roundScore.participantId,
+        share: roundScore.shareAfter ?? DEFAULT_PARTICIPANT_SHARE,
+      }))
+
+      return {
+        round: entry.round,
+        label,
+        strokes: score.strokes,
+        adjustedStrokes: score.adjustedStrokes,
+        shareDelta: score.shareDelta ?? 0,
+        handicapDelta: score.handicapDelta ?? 0,
+        costDelta:
+          getParticipantCostFromShares(participantId, afterShares) -
+          getParticipantCostFromShares(participantId, beforeShares),
+      }
+    }
+
+    const afterShares = participantsWithCosts.value.map((participant) => ({
+      id: participant.id,
+      share: participant.share,
+    }))
+    const beforeShares = afterShares.map((participant) => {
+      if (participant.id === entry.winnerId) {
+        return { ...participant, share: participant.share + 1 }
+      }
+
+      if (participant.id === entry.loserId) {
+        return { ...participant, share: Math.max(0, participant.share - 1) }
+      }
+
+      return participant
+    })
+    const shareDelta = participantId === entry.winnerId ? -1 : participantId === entry.loserId ? 1 : 0
+
+    return {
+      round: entry.round,
+      label,
+      strokes: score?.strokes,
+      adjustedStrokes: score?.adjustedStrokes,
+      shareDelta,
+      handicapDelta: shareDelta,
+      costDelta:
+        getParticipantCostFromShares(participantId, afterShares) -
+        getParticipantCostFromShares(participantId, beforeShares),
+    }
+  }
+  const myParticipantSummary = computed<MyParticipantSummary | null>(() => {
+    const participant = myParticipant.value
+
+    if (!participant) {
+      return null
+    }
+
+    const initialShares = matchState.value.participants.map((matchParticipant) => ({
+      id: matchParticipant.id,
+      share: DEFAULT_PARTICIPANT_SHARE,
+    }))
+    const latestSettlementRound = reversedHistory.value.find((entry) => entry.isSettlementApplied)
+
+    return {
+      participant,
+      initialCost: getParticipantCostFromShares(participant.id, initialShares),
+      costDelta: participant.cost - getParticipantCostFromShares(participant.id, initialShares),
+      shareDelta: participant.share - DEFAULT_PARTICIPANT_SHARE,
+      handicapDelta: participant.handicap - participant.initialHandicap,
+      latestChange: latestSettlementRound
+        ? getRoundParticipantChange(latestSettlementRound, participant.id)
+        : null,
+    }
+  })
 
   const clearRoundInputs = () => {
     roundScoreInputs.value = {}
@@ -255,6 +402,20 @@ export const useBetBoard = () => {
     roundScoreInputs.value = { ...roundScoreInputs.value, [participantId]: value }
   }
 
+  const setMyParticipant = (participantId: string) => {
+    if (!activeMatch.value?.participants.some((participant) => participant.id === participantId)) {
+      return
+    }
+
+    pendingDeleteParticipantId.value = null
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
+      myParticipantId: participantId,
+    }))
+    persistState('내 기준 변경됨')
+  }
+
   onMounted(() => {
     syncDinnerPriceFromActiveMatch()
     persistState()
@@ -267,10 +428,17 @@ export const useBetBoard = () => {
       initialHandicap: newParticipantHandicap.value,
     })
 
-    updateActiveMatch((match) => ({
-      ...match,
-      participants: [...match.participants, nextParticipant],
-    }))
+    updateActiveMatch((match) => {
+      const hasMyParticipant =
+        typeof match.myParticipantId === 'string' &&
+        match.participants.some((participant) => participant.id === match.myParticipantId)
+
+      return {
+        ...match,
+        myParticipantId: hasMyParticipant ? match.myParticipantId : nextParticipant.id,
+        participants: [...match.participants, nextParticipant],
+      }
+    })
 
     pendingDeleteParticipantId.value = null
     pendingDeleteMatchId.value = null
@@ -301,6 +469,14 @@ export const useBetBoard = () => {
 
       return {
         ...match,
+        ...(nextParticipants.length > 0
+          ? {
+              myParticipantId:
+                match.myParticipantId && nextParticipants.some((participant) => participant.id === match.myParticipantId)
+                  ? match.myParticipantId
+                  : nextParticipants[0].id,
+            }
+          : { myParticipantId: undefined }),
         participants: nextParticipants,
         history: normalizeRoundHistory(filteredHistory, nextParticipants),
       }
@@ -544,9 +720,14 @@ export const useBetBoard = () => {
 
   const getMatchSummaryText = (match: Match) => {
     const board = buildMatchState(match)
-    const topParticipant = getLeadingParticipant(getParticipantsWithCosts(board, match.dinnerPrice))
+    const participants = getParticipantsWithCosts(board, match.dinnerPrice)
+    const myParticipant =
+      participants.find((participant) => participant.id === match.myParticipantId) ?? participants[0]
+    const myParticipantText = myParticipant
+      ? `내 기준 ${myParticipant.name} ${formatWon(myParticipant.cost)}`
+      : '내 기준 -'
 
-    return `${match.participants.length}명 · ${board.recordedRoundCount}라운드 · 정산 ${board.settlementRoundCount}라운드 · 최다 부담 ${topParticipant?.name ?? '-'}`
+    return `${match.participants.length}명 · 기록 ${board.recordedRoundCount}R · 정산 ${board.settlementRoundCount}R · ${myParticipantText}`
   }
 
   const participantStyle = (index: number) => {
@@ -586,6 +767,9 @@ export const useBetBoard = () => {
     roundCourseName,
     matchState,
     participantsWithCosts,
+    myParticipantId,
+    myParticipant,
+    myParticipantSummary,
     leadingParticipant,
     lowestBurdenParticipant,
     shareRatioText,
@@ -615,6 +799,7 @@ export const useBetBoard = () => {
     deleteHistoryResult,
     getScoreInput,
     setScoreInput,
+    setMyParticipant,
     getMatchSummaryText,
     participantStyle,
     handicapMarkerStyle,

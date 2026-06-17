@@ -19,6 +19,7 @@ onMounted(() => {
       title="부담 · 핸디 분석"
       description="저녁값 부담 비율과 핸디 변화를 확인하세요."
     />
+    <BetBoardMyStatusPanel />
     <BetBoardSplitPanel />
     <BetBoardHandicapPanel />
   </div>
@@ -37,6 +38,10 @@ onMounted(() => {
     align-items: start;
 
     :deep(.page-intro) {
+      grid-column: 1 / -1;
+    }
+
+    :deep(.my-status) {
       grid-column: 1 / -1;
     }
   }

@@ -235,6 +235,14 @@ const normalizeStoredParticipants = (storedParticipants: unknown): Participant[]
   }, [])
 }
 
+const normalizeMatchMyParticipantId = (participantId: unknown, participants: Participant[]) => {
+  if (typeof participantId === 'string' && participants.some((participant) => participant.id === participantId)) {
+    return participantId
+  }
+
+  return participants[0]?.id
+}
+
 const normalizeStoredResultHistory = (storedHistory: unknown): LegacyResultEntry[] => {
   if (!Array.isArray(storedHistory)) {
     return []
@@ -475,23 +483,28 @@ export const createDefaultMatch = ({
   title,
   date,
   dinnerPrice,
+  myParticipantId,
   participants,
   history,
 }: {
   title?: unknown
   date?: string
   dinnerPrice?: unknown
+  myParticipantId?: unknown
   participants?: Participant[]
   history?: RoundEntry[]
 } = {}): Match => {
   const session = createDefaultSession()
+  const normalizedParticipants = participants ?? []
+  const normalizedMyParticipantId = normalizeMatchMyParticipantId(myParticipantId, normalizedParticipants)
 
   return {
     id: session.id,
     title: normalizeSessionTitle(title ?? session.title),
     date: date ?? session.date,
     dinnerPrice: normalizeDinnerPrice(dinnerPrice ?? session.dinnerPrice),
-    participants: participants ?? [],
+    ...(normalizedMyParticipantId ? { myParticipantId: normalizedMyParticipantId } : {}),
+    participants: normalizedParticipants,
     history: history ?? [],
     updatedAt: new Date().toISOString(),
   }
@@ -505,12 +518,14 @@ const normalizeStoredMatch = (storedMatch: unknown): Match | null => {
   const match = storedMatch as Partial<Match>
   const participants = normalizeStoredParticipants(match.participants)
   const session = normalizeStoredSession(match)
+  const myParticipantId = normalizeMatchMyParticipantId(match.myParticipantId, participants)
 
   return {
     id: session.id,
     title: session.title,
     date: session.date,
     dinnerPrice: session.dinnerPrice,
+    ...(myParticipantId ? { myParticipantId } : {}),
     participants,
     history: normalizeRoundHistory(match.history, participants),
     updatedAt:
@@ -553,6 +568,7 @@ const createMatchFromLegacyBoard = ({
   title: session.title,
   date: session.date,
   dinnerPrice: session.dinnerPrice,
+  ...(participants[0]?.id ? { myParticipantId: participants[0].id } : {}),
   participants,
   history: normalizeRoundHistory(history, participants),
   updatedAt: new Date().toISOString(),
@@ -608,7 +624,12 @@ const migrateSingleBoardState = (parsedValue: Record<string, unknown>): AppState
 const normalizeStoredAppState = (storedValue: string): AppState => {
   const parsedValue = JSON.parse(storedValue) as Record<string, unknown>
 
-  if (parsedValue?.version === APP_VERSION || parsedValue?.version === 7 || parsedValue?.version === 6) {
+  if (
+    parsedValue?.version === APP_VERSION ||
+    parsedValue?.version === 8 ||
+    parsedValue?.version === 7 ||
+    parsedValue?.version === 6
+  ) {
     const matches = normalizeStoredMatches(parsedValue.matches)
 
     if (matches.length === 0) {
@@ -664,20 +685,25 @@ export const serializeAppState = (state: AppState) =>
   JSON.stringify({
     version: APP_VERSION,
     activeMatchId: state.activeMatchId,
-    matches: state.matches.map((match) => ({
-      id: match.id,
-      title: match.title,
-      date: match.date,
-      dinnerPrice: match.dinnerPrice,
-      participants: match.participants.map((participant) => ({
-        id: participant.id,
-        name: participant.name,
-        initialHandicap: participant.initialHandicap,
-      })),
-      history: normalizeRoundHistory(match.history, match.participants).map((entry) => ({
-        ...entry,
-        rule: normalizeRoundRule(entry.rule),
-      })),
-      updatedAt: match.updatedAt,
-    })),
+    matches: state.matches.map((match) => {
+      const myParticipantId = normalizeMatchMyParticipantId(match.myParticipantId, match.participants)
+
+      return {
+        id: match.id,
+        title: match.title,
+        date: match.date,
+        dinnerPrice: match.dinnerPrice,
+        ...(myParticipantId ? { myParticipantId } : {}),
+        participants: match.participants.map((participant) => ({
+          id: participant.id,
+          name: participant.name,
+          initialHandicap: participant.initialHandicap,
+        })),
+        history: normalizeRoundHistory(match.history, match.participants).map((entry) => ({
+          ...entry,
+          rule: normalizeRoundRule(entry.rule),
+        })),
+        updatedAt: match.updatedAt,
+      }
+    }),
   })

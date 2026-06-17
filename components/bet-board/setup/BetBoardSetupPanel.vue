@@ -2,6 +2,7 @@
 const {
   activeMatch,
   pendingDeleteParticipantId,
+  myParticipantId,
   newParticipantName,
   newParticipantHandicap,
   matchState,
@@ -9,6 +10,7 @@ const {
   averageInitialHandicap,
   addParticipant,
   deleteParticipant,
+  setMyParticipant,
   updateSessionTitle,
   updateSessionDate,
   MIN_PARTICIPANTS,
@@ -99,7 +101,9 @@ const participantGuideText = computed(() =>
         :key="participant.id"
         :participant="participant"
         :index="index"
+        :is-my-participant="participant.id === myParticipantId"
         :pending-delete-id="pendingDeleteParticipantId"
+        @set-my-participant="setMyParticipant"
         @delete="deleteParticipant"
       />
     </div>

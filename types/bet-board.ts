@@ -103,6 +103,7 @@ export interface Match {
   title: string
   date: string
   dinnerPrice: number
+  myParticipantId?: string
   participants: Participant[]
   history: RoundEntry[]
   updatedAt: string
