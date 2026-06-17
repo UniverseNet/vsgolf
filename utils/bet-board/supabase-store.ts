@@ -150,8 +150,8 @@ export const subscribeSupabaseBoardState = (
   config: SupabaseStoreConfig,
   handlers: SupabaseRealtimeHandlers,
 ): SupabaseRealtimeSubscription => {
-  let heartbeatTimer: ReturnType<typeof window.setInterval> | null = null
-  let reconnectTimer: ReturnType<typeof window.setTimeout> | null = null
+  let heartbeatTimer: number | null = null
+  let reconnectTimer: number | null = null
   let ref = 1
   let closed = false
   let socket: WebSocket | null = null

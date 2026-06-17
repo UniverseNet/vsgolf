@@ -27,7 +27,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL,
-      supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_KEY,
+      supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_KEY,
       supabaseBoardId: "default",
     },
   },
@@ -78,9 +78,9 @@ export default defineNuxtConfig({
         {name: "apple-mobile-web-app-title", content: "VSGolf"},
       ],
       link: [
-        {rel: "manifest", href: "manifest.webmanifest"},
-        {rel: "icon", href: "pwa-192x192.png", type: "image/png"},
-        {rel: "apple-touch-icon", href: "apple-touch-icon.png"},
+        {rel: "manifest", href: `${appBaseURL}manifest.webmanifest`},
+        {rel: "icon", href: `${appBaseURL}pwa-192x192.png`, type: "image/png"},
+        {rel: "apple-touch-icon", href: `${appBaseURL}apple-touch-icon.png`},
         ...appleSplashScreens,
       ],
     },
@@ -113,19 +113,19 @@ export default defineNuxtConfig({
       prefer_related_applications: false,
       icons: [
         {
-          src: "pwa-192x192.png",
+          src: `${appBaseURL}pwa-192x192.png`,
           sizes: "192x192",
           type: "image/png",
           purpose: "any",
         },
         {
-          src: "pwa-512x512.png",
+          src: `${appBaseURL}pwa-512x512.png`,
           sizes: "512x512",
           type: "image/png",
           purpose: "any",
         },
         {
-          src: "pwa-512x512.png",
+          src: `${appBaseURL}pwa-512x512.png`,
           sizes: "512x512",
           type: "image/png",
           purpose: "maskable",
