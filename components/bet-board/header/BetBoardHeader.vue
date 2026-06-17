@@ -9,7 +9,7 @@ const {
 } = useBetBoardContext()
 
 const storageStatusText = computed(() => {
-  if (!isRemoteStoreEnabled.value) {
+  if (!isRemoteStoreEnabled) {
     return '개인 저장'
   }
 

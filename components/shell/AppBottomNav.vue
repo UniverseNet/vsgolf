@@ -306,12 +306,29 @@ const isActiveTab = (to: string, exact = false) => {
 @media (max-width: 360px) {
   .bottom-nav {
     &__inner {
-      gap: 4px;
-      padding-inline: 8px;
+      gap: 3px;
+      padding-inline: 7px;
+    }
+
+    &__item {
+      min-height: 50px;
+      padding-inline: 3px;
+      border-radius: 14px;
+    }
+
+    &__icon {
+      width: 29px;
+      height: 29px;
+      border-radius: 10px;
+
+      svg {
+        width: 19px;
+        height: 19px;
+      }
     }
 
     &__label {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
     }
 
   }

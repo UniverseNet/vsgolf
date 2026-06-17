@@ -20,6 +20,7 @@ onMounted(() => {
       description="현재 부담 비율과 진행 상황을 한눈에 확인하세요."
     />
 
+    <BetBoardRulesPrimer />
     <BetBoardMyStatusPanel />
     <BetBoardProgressGuide />
     <BetBoardDashboard />

@@ -12,7 +12,7 @@ const {
 const isHome = computed(() => route.name === 'index')
 const isMatchRoute = computed(() => Boolean(route.params.id))
 const storageStatusText = computed(() => {
-  if (!isRemoteStoreEnabled.value) {
+  if (!isRemoteStoreEnabled) {
     return '개인 저장'
   }
 
