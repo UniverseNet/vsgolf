@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { ScoredRoundHistoryEntry } from '~/types/bet-board'
-import { ROUND_RULE_FIELD_AVERAGE } from '~/utils/bet-board/constants'
+import {
+  ROUND_COMPLETION_STATUS_PARTIAL,
+  ROUND_RULE_FIELD_AVERAGE,
+  TOTAL_ROUND_HOLES,
+} from '~/utils/bet-board/constants'
 import { formatRoundCourseText } from '~/utils/bet-board/format'
 
 const props = defineProps<{
@@ -17,9 +21,20 @@ const { getHistoryScoreText, getHistoryAdjustmentText } = useBetBoardContext()
 
 const hasScores = computed(() => props.entry.scores.length > 0)
 const isFieldAverageRule = computed(() => props.entry.rule === ROUND_RULE_FIELD_AVERAGE)
+const isPartialRound = computed(() => props.entry.completionStatus === ROUND_COMPLETION_STATUS_PARTIAL)
+const isSettlementExcluded = computed(() => props.entry.isSettlementExcluded)
+const holesText = computed(() => `${props.entry.holesPlayed || TOTAL_ROUND_HOLES}홀`)
 
 const resultText = computed(() => {
+  if (isSettlementExcluded.value) {
+    return `${holesText.value} 중도 종료`
+  }
+
   if (hasScores.value && isFieldAverageRule.value) {
+    if (isPartialRound.value) {
+      return props.entry.isDraw ? `${holesText.value} 평균권` : `${holesText.value} 부분 반영`
+    }
+
     return props.entry.isDraw ? '평균권 라운드' : '평균 기준 조정'
   }
 
@@ -34,6 +49,11 @@ const courseText = computed(() => formatRoundCourseText(props.entry.courseName))
 
 const detailText = computed(() => {
   const coursePrefix = courseText.value ? `${courseText.value} · ` : ''
+  const partialPrefix = isPartialRound.value ? `${holesText.value} 진행 · ` : ''
+
+  if (isSettlementExcluded.value) {
+    return `${coursePrefix}${partialPrefix}${getHistoryScoreText(props.entry.scores)}`
+  }
 
   if (hasScores.value && isFieldAverageRule.value) {
     const averageText =
@@ -41,11 +61,11 @@ const detailText = computed(() => {
         ? `평균 보정 ${props.entry.averageAdjustedStrokes.toFixed(1)}타 · `
         : ''
 
-    return `${coursePrefix}${averageText}${getHistoryScoreText(props.entry.scores)}`
+    return `${coursePrefix}${partialPrefix}${averageText}${getHistoryScoreText(props.entry.scores)}`
   }
 
   if (hasScores.value) {
-    return `${coursePrefix}${getHistoryScoreText(props.entry.scores)}`
+    return `${coursePrefix}${partialPrefix}${getHistoryScoreText(props.entry.scores)}`
   }
 
   return courseText.value
@@ -54,6 +74,10 @@ const detailText = computed(() => {
 })
 
 const stateText = computed(() => {
+  if (isSettlementExcluded.value) {
+    return '정산 제외 · 부담/핸디 유지'
+  }
+
   if (hasScores.value && isFieldAverageRule.value) {
     return getHistoryAdjustmentText(props.entry.scores)
   }
@@ -69,7 +93,13 @@ const stateText = computed(() => {
 </script>
 
 <template>
-  <li class="history-item" :class="{ 'history-item--latest': isLatest }">
+  <li
+    class="history-item"
+    :class="{
+      'history-item--latest': isLatest,
+      'history-item--excluded': isSettlementExcluded,
+    }"
+  >
     <span class="history-item__round">{{ entry.round }}</span>
     <div class="history-item__main">
       <strong class="history-item__result">{{ resultText }}</strong>
@@ -122,6 +152,15 @@ const stateText = computed(() => {
 
   &--latest {
     animation: history-enter 340ms var(--ease-out) both;
+  }
+
+  &--excluded {
+    border-color: rgba(199, 147, 53, 0.22);
+    background: linear-gradient(135deg, var(--brass-soft), rgba(255, 255, 255, 0.78));
+
+    .history-item__round {
+      background: linear-gradient(135deg, var(--brass), var(--coral));
+    }
   }
 }
 

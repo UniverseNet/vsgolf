@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const {
   activeMatch,
+  matchState,
   participantsWithCosts,
   shareRatioText,
   settlementSummary,
@@ -34,6 +35,11 @@ const {
       <article class="settlement-card">
         <span>총 저녁값</span>
         <strong>{{ formatWon(dinnerPrice) }}</strong>
+      </article>
+      <article class="settlement-card">
+        <span>정산 반영</span>
+        <strong>{{ matchState.settlementRoundCount }}R</strong>
+        <small>기록 {{ matchState.recordedRoundCount }}R · 제외 {{ matchState.excludedRoundCount }}R</small>
       </article>
       <article class="settlement-card">
         <span>최소 정산</span>
@@ -90,7 +96,7 @@ const {
 
 .settlement-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 1.25fr) repeat(4, minmax(120px, 1fr));
+  grid-template-columns: minmax(220px, 1.25fr) repeat(5, minmax(110px, 1fr));
   gap: 10px;
 }
 

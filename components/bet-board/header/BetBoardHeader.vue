@@ -10,7 +10,7 @@ const { activeMatch, matchState, saveStatusText, saveStatusAnimating } = useBetB
         <p class="app-header__eyebrow">Dinner Match Board</p>
         <h1 id="page-title">저녁내기 보드</h1>
         <p class="app-header__summary">
-          참가자 {{ activeMatch?.participants.length ?? 0 }}명 · {{ matchState.history.length + 1 }}번째 내기 기준
+          참가자 {{ activeMatch?.participants.length ?? 0 }}명 · {{ matchState.recordedRoundCount + 1 }}번째 내기 기준
         </p>
       </div>
     </div>

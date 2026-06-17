@@ -1,11 +1,21 @@
-import type { AppState, Match, ParticipantWithCost } from '~/types/bet-board'
+import type {
+  AppState,
+  Match,
+  PartialRoundPolicy,
+  ParticipantWithCost,
+  RoundCompletionStatus,
+} from '~/types/bet-board'
 import {
   DEFAULT_DINNER_PRICE,
   DEFAULT_INITIAL_HANDICAP,
   MAX_MATCHES,
   MIN_PARTICIPANTS,
+  PARTIAL_ROUND_POLICY_PRORATE,
+  ROUND_COMPLETION_STATUS_COMPLETED,
+  ROUND_COMPLETION_STATUS_PARTIAL,
   ROUND_RULE_FIELD_AVERAGE,
   STORAGE_KEY,
+  TOTAL_ROUND_HOLES,
 } from '~/utils/bet-board/constants'
 import {
   formatDateText,
@@ -50,6 +60,9 @@ export const useBetBoard = () => {
   const saveStatusText = ref('저장됨')
   const saveStatusAnimating = ref(false)
   const boardRoundFeedback = ref(false)
+  const isPartialRound = ref(false)
+  const holesPlayedInput = ref('9')
+  const partialRoundPolicy = ref<PartialRoundPolicy>(PARTIAL_ROUND_POLICY_PRORATE)
 
   const activeMatch = computed(
     () =>
@@ -69,6 +82,38 @@ export const useBetBoard = () => {
   const newParticipantName = ref('')
   const newParticipantHandicap = ref(String(DEFAULT_INITIAL_HANDICAP))
   const roundCourseName = ref('')
+  const roundHolesPlayed = computed(() => {
+    if (!isPartialRound.value) {
+      return TOTAL_ROUND_HOLES
+    }
+
+    const numericHolesPlayed = Number(holesPlayedInput.value)
+
+    if (!Number.isFinite(numericHolesPlayed)) {
+      return null
+    }
+
+    return Math.round(numericHolesPlayed)
+  })
+
+  const roundCalculationOptions = computed<{
+    holesPlayed: number | null
+    completionStatus: RoundCompletionStatus
+    partialRoundPolicy?: PartialRoundPolicy
+  }>(() => {
+    if (isPartialRound.value) {
+      return {
+        holesPlayed: roundHolesPlayed.value,
+        completionStatus: ROUND_COMPLETION_STATUS_PARTIAL,
+        partialRoundPolicy: partialRoundPolicy.value,
+      }
+    }
+
+    return {
+      holesPlayed: TOTAL_ROUND_HOLES,
+      completionStatus: ROUND_COMPLETION_STATUS_COMPLETED,
+    }
+  })
 
   const dinnerPrice = computed(() => {
     const numericText = String(dinnerPriceDisplay.value).replace(/\D/g, '')
@@ -111,6 +156,7 @@ export const useBetBoard = () => {
     getRoundScoreSummary(
       matchState.value.participants,
       new Map(Object.entries(roundScoreInputs.value)),
+      roundCalculationOptions.value,
     ).message,
   )
 
@@ -124,7 +170,9 @@ export const useBetBoard = () => {
     return buildSettlementSummary({
       participants: participantsWithCosts.value,
       dinnerPrice: dinnerPrice.value,
-      roundCount: matchState.value.history.length,
+      roundCount: matchState.value.recordedRoundCount,
+      settlementRoundCount: matchState.value.settlementRoundCount,
+      excludedRoundCount: matchState.value.excludedRoundCount,
       session: {
         id: match.id,
         title: match.title,
@@ -139,6 +187,9 @@ export const useBetBoard = () => {
   const clearRoundInputs = () => {
     roundScoreInputs.value = {}
     roundCourseName.value = ''
+    isPartialRound.value = false
+    holesPlayedInput.value = '9'
+    partialRoundPolicy.value = PARTIAL_ROUND_POLICY_PRORATE
   }
 
   const updateActiveMatch = (updater: (match: Match) => Match) => {
@@ -264,6 +315,7 @@ export const useBetBoard = () => {
     const summary = getRoundScoreSummary(
       matchState.value.participants,
       new Map(Object.entries(roundScoreInputs.value)),
+      roundCalculationOptions.value,
     )
 
     pendingDeleteParticipantId.value = null
@@ -287,13 +339,24 @@ export const useBetBoard = () => {
           loserId: summary.loserId ?? '',
           rule: summary.rule ?? ROUND_RULE_FIELD_AVERAGE,
           winnerId: summary.winnerId ?? '',
+          holesPlayed: summary.holesPlayed ?? TOTAL_ROUND_HOLES,
+          completionStatus: summary.completionStatus ?? ROUND_COMPLETION_STATUS_COMPLETED,
+          ...(summary.partialRoundPolicy ? { partialRoundPolicy: summary.partialRoundPolicy } : {}),
           ...(courseName ? { courseName } : {}),
         },
       ],
     }))
 
     clearRoundInputs()
-    persistState(summary.isDraw ? '평균권 라운드 저장됨' : '평균 룰 저장됨')
+    persistState(
+      summary.isSettlementExcluded
+        ? '중도 종료 기록됨'
+        : summary.completionStatus === ROUND_COMPLETION_STATUS_PARTIAL
+          ? '부분 반영 저장됨'
+          : summary.isDraw
+            ? '평균권 라운드 저장됨'
+            : '평균 룰 저장됨',
+    )
     playRoundFeedback()
   }
 
@@ -483,7 +546,7 @@ export const useBetBoard = () => {
     const board = buildMatchState(match)
     const topParticipant = getLeadingParticipant(getParticipantsWithCosts(board, match.dinnerPrice))
 
-    return `${match.participants.length}명 · ${board.history.length}라운드 · 최다 부담 ${topParticipant?.name ?? '-'}`
+    return `${match.participants.length}명 · ${board.recordedRoundCount}라운드 · 정산 ${board.settlementRoundCount}라운드 · 최다 부담 ${topParticipant?.name ?? '-'}`
   }
 
   const participantStyle = (index: number) => {
@@ -513,6 +576,10 @@ export const useBetBoard = () => {
     saveStatusText,
     saveStatusAnimating,
     boardRoundFeedback,
+    isPartialRound,
+    holesPlayedInput,
+    partialRoundPolicy,
+    roundHolesPlayed,
     dinnerPriceDisplay,
     newParticipantName,
     newParticipantHandicap,

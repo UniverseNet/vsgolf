@@ -1,7 +1,9 @@
 import type {
   AppState,
   Match,
+  PartialRoundPolicy,
   Participant,
+  RoundCompletionStatus,
   RoundEntry,
   SavedSession,
   ScoreEntry,
@@ -19,8 +21,13 @@ import {
   MAX_MATCHES,
   MAX_SAVED_SESSIONS,
   MIN_PARTICIPANTS,
+  PARTIAL_ROUND_POLICY_EXCLUDE,
+  PARTIAL_ROUND_POLICY_PRORATE,
+  ROUND_COMPLETION_STATUS_COMPLETED,
+  ROUND_COMPLETION_STATUS_PARTIAL,
   ROUND_RULE_FIELD_AVERAGE,
   ROUND_RULE_STROKE_EXTREMES,
+  TOTAL_ROUND_HOLES,
 } from './constants'
 import { getStrokeRoundOutcome } from './match'
 
@@ -112,6 +119,27 @@ export const normalizeStroke = (stroke: unknown): number | null => {
 
 export const normalizeRoundRule = (rule: unknown) =>
   rule === ROUND_RULE_FIELD_AVERAGE ? ROUND_RULE_FIELD_AVERAGE : ROUND_RULE_STROKE_EXTREMES
+
+export const normalizeHolesPlayed = (holesPlayed: unknown, fallback = TOTAL_ROUND_HOLES) => {
+  const numericHolesPlayed = Number(holesPlayed)
+
+  if (!Number.isFinite(numericHolesPlayed)) {
+    return fallback
+  }
+
+  return clamp(Math.round(numericHolesPlayed), 1, TOTAL_ROUND_HOLES)
+}
+
+export const normalizeRoundCompletionStatus = (
+  status: unknown,
+  holesPlayed = TOTAL_ROUND_HOLES,
+): RoundCompletionStatus =>
+  status === ROUND_COMPLETION_STATUS_PARTIAL && holesPlayed < TOTAL_ROUND_HOLES
+    ? ROUND_COMPLETION_STATUS_PARTIAL
+    : ROUND_COMPLETION_STATUS_COMPLETED
+
+export const normalizePartialRoundPolicy = (policy: unknown): PartialRoundPolicy =>
+  policy === PARTIAL_ROUND_POLICY_EXCLUDE ? PARTIAL_ROUND_POLICY_EXCLUDE : PARTIAL_ROUND_POLICY_PRORATE
 
 export const normalizeScoreEntries = (scores: unknown, participantIds: Set<string>): ScoreEntry[] => {
   if (!Array.isArray(scores)) {
@@ -288,13 +316,28 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
       loserId?: string
       isDraw?: boolean
       courseName?: string
+      holesPlayed?: unknown
+      completionStatus?: string
+      partialRoundPolicy?: string
       rule?: string
     }
 
     const courseName = normalizeCourseName(e.courseName)
     const rule = normalizeRoundRule(e.rule)
+    const holesPlayed = normalizeHolesPlayed(e.holesPlayed)
+    const completionStatus = normalizeRoundCompletionStatus(e.completionStatus, holesPlayed)
+    const partialRoundPolicy =
+      completionStatus === ROUND_COMPLETION_STATUS_PARTIAL
+        ? normalizePartialRoundPolicy(e.partialRoundPolicy)
+        : undefined
     const withCourseName = <T extends RoundEntry>(roundEntry: T) =>
       courseName ? { ...roundEntry, courseName } : roundEntry
+    const withRoundCompletion = <T extends RoundEntry>(roundEntry: T): T => ({
+      ...roundEntry,
+      holesPlayed: completionStatus === ROUND_COMPLETION_STATUS_PARTIAL ? holesPlayed : TOTAL_ROUND_HOLES,
+      completionStatus,
+      ...(partialRoundPolicy ? { partialRoundPolicy } : {}),
+    })
 
     if (Array.isArray(e.scores)) {
       const scores = normalizeScoreEntries(e.scores, participantIds)
@@ -308,14 +351,16 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
 
       return [
         ...normalizedHistory,
-        withCourseName({
-          round: normalizedHistory.length + 1,
-          scores,
-          isDraw: outcome.isDraw,
-          loserId: outcome.loserId,
-          rule,
-          winnerId: outcome.winnerId,
-        }),
+        withCourseName(
+          withRoundCompletion({
+            round: normalizedHistory.length + 1,
+            scores,
+            isDraw: outcome.isDraw,
+            loserId: outcome.loserId,
+            rule,
+            winnerId: outcome.winnerId,
+          }),
+        ),
       ]
     }
 
@@ -325,12 +370,14 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
 
       return [
         ...normalizedHistory,
-        withCourseName({
-          round: normalizedHistory.length + 1,
-          winnerId,
-          loserId,
-          rule: ROUND_RULE_STROKE_EXTREMES,
-        }),
+        withCourseName(
+          withRoundCompletion({
+            round: normalizedHistory.length + 1,
+            winnerId,
+            loserId,
+            rule: ROUND_RULE_STROKE_EXTREMES,
+          }),
+        ),
       ]
     }
 
@@ -346,12 +393,14 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
 
     return [
       ...normalizedHistory,
-      withCourseName({
-        round: normalizedHistory.length + 1,
-        winnerId: e.winnerId,
-        loserId: e.loserId,
-        rule,
-      }),
+      withCourseName(
+        withRoundCompletion({
+          round: normalizedHistory.length + 1,
+          winnerId: e.winnerId,
+          loserId: e.loserId,
+          rule,
+        }),
+      ),
     ]
   }, [])
 }
@@ -559,7 +608,7 @@ const migrateSingleBoardState = (parsedValue: Record<string, unknown>): AppState
 const normalizeStoredAppState = (storedValue: string): AppState => {
   const parsedValue = JSON.parse(storedValue) as Record<string, unknown>
 
-  if (parsedValue?.version === APP_VERSION || parsedValue?.version === 6) {
+  if (parsedValue?.version === APP_VERSION || parsedValue?.version === 7 || parsedValue?.version === 6) {
     const matches = normalizeStoredMatches(parsedValue.matches)
 
     if (matches.length === 0) {

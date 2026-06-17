@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import type { PartialRoundPolicy } from '~/types/bet-board'
+import {
+  PARTIAL_ROUND_POLICY_EXCLUDE,
+  PARTIAL_ROUND_POLICY_PRORATE,
+  TOTAL_ROUND_HOLES,
+} from '~/utils/bet-board/constants'
+
 const route = useRoute()
 const {
   activeMatch,
@@ -9,6 +16,9 @@ const {
   undoLastResult,
   resetBoard,
   roundCourseName,
+  isPartialRound,
+  holesPlayedInput,
+  partialRoundPolicy,
   getScoreInput,
   setScoreInput,
   MIN_PARTICIPANTS,
@@ -23,9 +33,25 @@ const roundGuideTitle = computed(() =>
 )
 const roundGuideDescription = computed(() =>
   hasRequiredParticipants.value
-    ? '라운드가 끝날 때 참가자별 실제 타수를 입력하세요. 현재 핸디를 뺀 보정 타수가 평균보다 좋거나 나쁘면 부담과 핸디가 함께 조정됩니다.'
+    ? '라운드가 끝날 때 참가자별 실제 타수를 입력하세요. 중도 종료 라운드는 진행 홀 수 기준으로 부분 반영하거나 정산에서 제외할 수 있습니다.'
     : `최소 ${MIN_PARTICIPANTS}명을 추가해야 라운드 결과 입력이 가능합니다.`,
 )
+const partialRoundPolicyOptions: Array<{
+  value: PartialRoundPolicy
+  label: string
+  description: string
+}> = [
+  {
+    value: PARTIAL_ROUND_POLICY_PRORATE,
+    label: '부분 반영',
+    description: '진행 홀 비율로 핸디와 평균 기준을 줄여 반영',
+  },
+  {
+    value: PARTIAL_ROUND_POLICY_EXCLUDE,
+    label: '정산 제외',
+    description: '기록만 남기고 부담과 핸디는 유지',
+  },
+]
 
 const onScoreInput = (participantId: string, event: Event) => {
   setScoreInput(participantId, (event.target as HTMLInputElement).value)
@@ -59,10 +85,56 @@ const onScoreInput = (participantId: string, event: Event) => {
       />
     </label>
 
+    <div class="partial-round-panel" :class="{ 'partial-round-panel--active': isPartialRound }">
+      <label class="partial-round-toggle">
+        <input v-model="isPartialRound" type="checkbox" />
+        <span class="partial-round-toggle__control" aria-hidden="true"></span>
+        <span class="partial-round-toggle__copy">
+          <strong>18홀 미완료</strong>
+          <small>{{ isPartialRound ? '중도 종료 라운드' : '18홀 완료 라운드' }}</small>
+        </span>
+      </label>
+
+      <div v-show="isPartialRound" class="partial-round-options">
+        <label class="holes-played-field" for="holesPlayedInput">
+          <span>진행 홀</span>
+          <input
+            id="holesPlayedInput"
+            v-model="holesPlayedInput"
+            type="number"
+            min="1"
+            :max="TOTAL_ROUND_HOLES - 1"
+            step="1"
+            inputmode="numeric"
+            autocomplete="off"
+            @keydown.enter.prevent="applyRoundResult"
+          />
+        </label>
+
+        <div class="partial-policy-group" role="radiogroup" aria-label="중도 종료 정산 방식">
+          <label
+            v-for="option in partialRoundPolicyOptions"
+            :key="option.value"
+            class="partial-policy"
+            :class="{ 'partial-policy--active': partialRoundPolicy === option.value }"
+          >
+            <input
+              v-model="partialRoundPolicy"
+              type="radio"
+              name="partialRoundPolicy"
+              :value="option.value"
+            />
+            <strong>{{ option.label }}</strong>
+            <small>{{ option.description }}</small>
+          </label>
+        </div>
+      </div>
+    </div>
+
     <div class="score-entry-panel" aria-labelledby="scoreInputTitle">
       <div class="score-entry-panel__header">
         <strong id="scoreInputTitle">타수 입력</strong>
-        <span>평균 대비 3타 ±1 · 6타 ±2</span>
+        <span>18홀 기준 평균 대비 3타 ±1 · 6타 ±2</span>
       </div>
       <div class="score-input-list" aria-labelledby="scoreInputTitle">
         <p v-if="participantsWithCosts.length === 0" class="score-input-empty">
@@ -103,7 +175,7 @@ const onScoreInput = (participantId: string, event: Event) => {
       <button
         class="button button--neutral"
         type="button"
-        :disabled="matchState.history.length === 0"
+        :disabled="matchState.recordedRoundCount === 0"
         @click="undoLastResult"
       >
         되돌리기
@@ -194,6 +266,176 @@ const onScoreInput = (participantId: string, event: Event) => {
   font-size: 0.78rem;
   font-style: normal;
   font-weight: 800;
+}
+
+.partial-round-panel {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(34, 58, 50, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+
+  &--active {
+    border-color: rgba(199, 147, 53, 0.28);
+    background: linear-gradient(135deg, var(--brass-soft), rgba(255, 255, 255, 0.72));
+  }
+}
+
+.partial-round-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+
+  input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+
+    &:checked + .partial-round-toggle__control {
+      border-color: rgba(7, 137, 135, 0.38);
+      background: linear-gradient(135deg, var(--teal), var(--mint));
+
+      &::after {
+        transform: translateX(18px);
+      }
+    }
+
+    &:focus-visible + .partial-round-toggle__control {
+      box-shadow: 0 0 0 4px rgba(56, 201, 141, 0.18);
+    }
+  }
+}
+
+.partial-round-toggle__control {
+  position: relative;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 24px;
+  border: 1px solid rgba(34, 58, 50, 0.18);
+  border-radius: 999px;
+  background: #dce7e2;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+
+  &::after {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(16, 26, 23, 0.2);
+    transition: transform 160ms var(--ease-out);
+    content: '';
+  }
+}
+
+.partial-round-toggle__copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+
+  strong {
+    color: var(--text);
+    font-size: 0.92rem;
+    font-weight: 800;
+  }
+
+  small {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+}
+
+.partial-round-options {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.42fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.holes-played-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+
+  input {
+    @include form-input;
+    min-height: 58px;
+    font-size: 1.18rem;
+    font-weight: 800;
+    text-align: center;
+  }
+}
+
+.partial-policy-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.partial-policy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 74px;
+  padding: 11px;
+  border: 1px solid rgba(34, 58, 50, 0.12);
+  border-radius: 8px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.66);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms var(--ease-out);
+
+  input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+
+    &:focus-visible + strong {
+      outline: 3px solid rgba(56, 201, 141, 0.24);
+      outline-offset: 3px;
+    }
+  }
+
+  strong {
+    color: var(--text);
+    font-size: 0.88rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  small {
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  &--active {
+    transform: translateY(-1px);
+    border-color: rgba(7, 137, 135, 0.3);
+    background: rgba(221, 246, 243, 0.82);
+    box-shadow: 0 8px 18px rgba(16, 26, 23, 0.07);
+  }
 }
 
 .score-entry-panel {
@@ -316,6 +558,11 @@ const onScoreInput = (participantId: string, event: Event) => {
 }
 
 @media (max-width: 720px) {
+  .partial-round-options,
+  .partial-policy-group {
+    grid-template-columns: 1fr;
+  }
+
   .control-actions {
     grid-template-columns: 1fr;
   }

@@ -1,4 +1,6 @@
 export type RoundRule = 'stroke-extremes' | 'field-average'
+export type RoundCompletionStatus = 'completed' | 'partial'
+export type PartialRoundPolicy = 'exclude' | 'prorate'
 
 export interface Participant {
   id: string
@@ -21,6 +23,7 @@ export interface ScoreEntry {
 export interface RoundScoreDetail extends ScoreEntry {
   participantName: string
   handicapBefore?: number
+  handicapApplied?: number
   adjustedStrokes?: number
   differenceFromAverage?: number
   shareDelta?: number
@@ -37,6 +40,9 @@ export interface RoundEntry {
   rule?: RoundRule
   winnerId: string
   courseName?: string
+  holesPlayed?: number
+  completionStatus?: RoundCompletionStatus
+  partialRoundPolicy?: PartialRoundPolicy
 }
 
 export interface ParticipantState extends Participant {
@@ -52,6 +58,11 @@ export interface ScoredRoundHistoryEntry {
   isDraw: boolean
   rule?: RoundRule
   courseName?: string
+  holesPlayed: number
+  completionStatus: RoundCompletionStatus
+  partialRoundPolicy?: PartialRoundPolicy
+  isSettlementExcluded: boolean
+  isSettlementApplied: boolean
   loserId: string
   loserName: string
   loserShare: number
@@ -108,6 +119,10 @@ export interface RoundScoreSummary {
   loserId?: string
   message: string
   rule?: RoundRule
+  holesPlayed?: number
+  completionStatus?: RoundCompletionStatus
+  partialRoundPolicy?: PartialRoundPolicy
+  isSettlementExcluded?: boolean
   averageAdjustedStrokes?: number
   adjustments?: RoundScoreDetail[]
   winnerId?: string
@@ -118,4 +133,8 @@ export interface MatchState {
   participants: ParticipantState[]
   history: ScoredRoundHistoryEntry[]
   totalShare: number
+  recordedRoundCount: number
+  settlementRoundCount: number
+  partialRoundCount: number
+  excludedRoundCount: number
 }

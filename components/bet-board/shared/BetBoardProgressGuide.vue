@@ -14,7 +14,8 @@ const { activeMatch, matchState, MIN_PARTICIPANTS } = useBetBoardContext()
 
 const matchId = computed(() => route.params.id as string)
 const participantCount = computed(() => activeMatch.value?.participants.length ?? 0)
-const roundCount = computed(() => matchState.value.history.length)
+const roundCount = computed(() => matchState.value.recordedRoundCount)
+const settlementRoundCount = computed(() => matchState.value.settlementRoundCount)
 const hasRequiredParticipants = computed(() => participantCount.value >= MIN_PARTICIPANTS)
 const hasRoundHistory = computed(() => roundCount.value > 0)
 
@@ -39,7 +40,7 @@ const panelDescription = computed(() => {
     return '각 참가자의 실제 타수를 모두 입력하면 현재 핸디를 뺀 평균 보정 타수 기준으로 부담 점수가 누적됩니다.'
   }
 
-  return '현재까지 입력한 라운드를 기준으로 부담 비율, 핸디 변화, 예상 결제 금액을 확인하세요.'
+  return '현재까지 정산에 반영된 라운드를 기준으로 부담 비율, 핸디 변화, 예상 결제 금액을 확인하세요.'
 })
 
 const primaryAction = computed(() => {
@@ -92,7 +93,7 @@ const guideSteps = computed<GuideStep[]>(() => [
   {
     key: 'round',
     label: '라운드 입력',
-    description: `${roundCount.value}라운드 기록됨`,
+    description: `${roundCount.value}라운드 기록 · 정산 ${settlementRoundCount.value}라운드`,
     status: hasRoundHistory.value
       ? 'complete'
       : hasRequiredParticipants.value

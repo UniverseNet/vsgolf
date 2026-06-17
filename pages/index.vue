@@ -24,7 +24,7 @@ const guideSteps = [
   },
   {
     title: '라운드 타수 입력',
-    description: '각 라운드가 끝날 때 참가자별 실제 타수를 기록합니다.',
+    description: '완료 라운드와 중도 종료 라운드의 참가자별 실제 타수를 기록합니다.',
   },
   {
     title: '부담 비율과 정산 확인',

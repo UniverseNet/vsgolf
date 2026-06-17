@@ -24,9 +24,11 @@ const { matchState, lowestBurdenParticipant, leadingParticipant, leaderText, low
     </article>
 
     <article class="metric">
-      <span class="metric__label">진행 라운드</span>
-      <strong class="metric__value">{{ matchState.history.length }}R</strong>
-      <span class="metric__sub-value">총 {{ matchState.totalShare }}점</span>
+      <span class="metric__label">기록 라운드</span>
+      <strong class="metric__value">{{ matchState.recordedRoundCount }}R</strong>
+      <span class="metric__sub-value">
+        정산 {{ matchState.settlementRoundCount }}R · 제외 {{ matchState.excludedRoundCount }}R
+      </span>
     </article>
   </section>
 </template>

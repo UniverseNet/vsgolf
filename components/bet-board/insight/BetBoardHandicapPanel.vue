@@ -4,7 +4,9 @@ const { matchState, participantsWithCosts } = useBetBoardContext()
 
 <template>
   <section class="handicap-panel" aria-label="핸디 변화">
-    <p class="handicap-panel__meta">{{ matchState.history.length }}라운드 기준</p>
+    <p class="handicap-panel__meta">
+      기록 {{ matchState.recordedRoundCount }}라운드 · 정산 반영 {{ matchState.settlementRoundCount }}라운드 기준
+    </p>
 
     <div class="handicap-list">
       <BetBoardHandicapItem
@@ -16,20 +18,20 @@ const { matchState, participantsWithCosts } = useBetBoardContext()
 
     <div class="rule-grid" aria-label="조정 규칙">
       <article class="rule-grid__item rule-grid__item--win">
-        <span>평균보다 3~5타 좋음</span>
+        <span>18홀 평균보다 3~5타 좋음</span>
         <strong>부담 -1점 · 핸디 -1</strong>
       </article>
       <article class="rule-grid__item rule-grid__item--lose">
-        <span>평균보다 6타 이상 좋음</span>
+        <span>18홀 평균보다 6타 이상 좋음</span>
         <strong>부담 -2점 · 핸디 -2</strong>
       </article>
       <article class="rule-grid__item rule-grid__item--warn">
-        <span>평균보다 3~5타 나쁨</span>
+        <span>18홀 평균보다 3~5타 나쁨</span>
         <strong>부담 +1점 · 핸디 +1</strong>
       </article>
       <article class="rule-grid__item rule-grid__item--lose">
-        <span>평균보다 6타 이상 나쁨</span>
-        <strong>부담 +2점 · 핸디 +2</strong>
+        <span>중도 종료 부분 반영</span>
+        <strong>진행 홀 비율 적용</strong>
       </article>
     </div>
   </section>

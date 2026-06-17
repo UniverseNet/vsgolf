@@ -27,7 +27,7 @@ const participantGuideText = computed(() =>
     <div class="setup-summary">
       <output class="setup-summary__status">
         {{ activeMatch?.participants.length ?? 0 }}명 · 시작 핸디 평균 +{{ averageInitialHandicap.toFixed(1) }} ·
-        {{ matchState.history.length }}라운드
+        기록 {{ matchState.recordedRoundCount }}라운드
       </output>
       <p class="setup-summary__guide">{{ participantGuideText }}</p>
     </div>
