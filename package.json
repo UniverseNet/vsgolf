@@ -12,6 +12,7 @@
     "nuxt": "^3.16.2"
   },
   "devDependencies": {
+    "@types/node": "^25.9.3",
     "@vite-pwa/nuxt": "^1.1.1",
     "sass": "^1.100.0",
     "typescript": "^5.8.2"
