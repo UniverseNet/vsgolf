@@ -5,7 +5,7 @@ import {
   ROUND_RULE_FIELD_AVERAGE,
   TOTAL_ROUND_HOLES,
 } from '~/utils/bet-board/constants'
-import { formatRoundCourseText } from '~/utils/bet-board/format'
+import { formatRoundCourseText, formatWon } from '~/utils/bet-board/format'
 
 const props = defineProps<{
   entry: ScoredRoundHistoryEntry
@@ -17,13 +17,23 @@ const emit = defineEmits<{
   delete: [round: number]
 }>()
 
-const { getHistoryScoreText, getHistoryAdjustmentText } = useBetBoardContext()
+const { dinnerPrice, getHistoryScoreText, getHistoryAdjustmentText } = useBetBoardContext()
 
 const hasScores = computed(() => props.entry.scores.length > 0)
 const isFieldAverageRule = computed(() => props.entry.rule === ROUND_RULE_FIELD_AVERAGE)
 const isPartialRound = computed(() => props.entry.completionStatus === ROUND_COMPLETION_STATUS_PARTIAL)
 const isSettlementExcluded = computed(() => props.entry.isSettlementExcluded)
 const holesText = computed(() => `${props.entry.holesPlayed || TOTAL_ROUND_HOLES}홀`)
+const isExpanded = ref(props.isLatest)
+
+watch(
+  () => props.isLatest,
+  (isLatest) => {
+    if (isLatest) {
+      isExpanded.value = true
+    }
+  },
+)
 
 const resultText = computed(() => {
   if (isSettlementExcluded.value) {
@@ -90,6 +100,145 @@ const stateText = computed(() => {
 
   return `${props.entry.winnerName} ${props.entry.winnerShare}점 · ${props.entry.loserName} ${props.entry.loserShare}점`
 })
+
+const formatDecimal = (value?: number) => {
+  if (typeof value !== 'number') {
+    return '-'
+  }
+
+  return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
+const formatSignedDecimal = (value?: number, unit = '') => {
+  if (typeof value !== 'number') {
+    return '-'
+  }
+
+  const formattedValue = formatDecimal(Math.abs(value))
+
+  if (value === 0) {
+    return `0${unit}`
+  }
+
+  return `${value > 0 ? '+' : '-'}${formattedValue}${unit}`
+}
+
+const formatSignedWon = (value: number | null) => {
+  if (value === null) {
+    return '-'
+  }
+
+  if (value === 0) {
+    return '0원'
+  }
+
+  return value > 0 ? `+${formatWon(value)}` : `-${formatWon(Math.abs(value))}`
+}
+
+const getParticipantCostFromShares = (
+  participantId: string,
+  shares: Array<{ id: string; share: number }>,
+) => {
+  const totalShare = shares.reduce((sum, participant) => sum + participant.share, 0) || 1
+  let allocatedCost = 0
+
+  return shares.reduce((participantCost, participant, index) => {
+    const isLastParticipant = index === shares.length - 1
+    const cost = isLastParticipant
+      ? Math.max(0, dinnerPrice.value - allocatedCost)
+      : Math.round(dinnerPrice.value * (participant.share / totalShare))
+
+    allocatedCost += cost
+
+    return participant.id === participantId ? cost : participantCost
+  }, 0)
+}
+
+const scoreCostDeltaMap = computed(() => {
+  const canCalculateCost =
+    props.entry.isSettlementApplied &&
+    props.entry.scores.length > 0 &&
+    props.entry.scores.every(
+      (score) => typeof score.shareAfter === 'number' && typeof score.shareDelta === 'number',
+    )
+
+  if (!canCalculateCost) {
+    return new Map<string, number | null>()
+  }
+
+  const beforeShares = props.entry.scores.map((score) => ({
+    id: score.participantId,
+    share: Math.max(0, (score.shareAfter ?? 0) - (score.shareDelta ?? 0)),
+  }))
+  const afterShares = props.entry.scores.map((score) => ({
+    id: score.participantId,
+    share: score.shareAfter ?? 0,
+  }))
+
+  return new Map(
+    props.entry.scores.map((score) => [
+      score.participantId,
+      getParticipantCostFromShares(score.participantId, afterShares) -
+        getParticipantCostFromShares(score.participantId, beforeShares),
+    ]),
+  )
+})
+
+const scoreRecordRows = computed(() =>
+  props.entry.scores.map((score) => {
+    const costDelta = scoreCostDeltaMap.value.has(score.participantId)
+      ? scoreCostDeltaMap.value.get(score.participantId) ?? null
+      : null
+
+    return {
+      id: score.participantId,
+      name: score.participantName,
+      strokesText: `${score.strokes}타`,
+      handicapAppliedText:
+        typeof score.handicapApplied === 'number' ? `+${formatDecimal(score.handicapApplied)}` : '-',
+      adjustedStrokesText:
+        typeof score.adjustedStrokes === 'number' ? `${formatDecimal(score.adjustedStrokes)}타` : '-',
+      differenceText: formatSignedDecimal(score.differenceFromAverage, '타'),
+      shareChangeText:
+        typeof score.shareDelta === 'number'
+          ? `${formatSignedDecimal(score.shareDelta, '점')} → ${score.shareAfter ?? '-'}점`
+          : isSettlementExcluded.value
+            ? '0점'
+            : '-',
+      handicapChangeText:
+        typeof score.handicapDelta === 'number'
+          ? `${formatSignedDecimal(score.handicapDelta)} → +${score.handicapAfter ?? '-'}`
+          : isSettlementExcluded.value
+            ? '0'
+            : '-',
+      costChangeText: formatSignedWon(costDelta),
+      shareDelta: score.shareDelta ?? 0,
+      costDelta: costDelta ?? 0,
+    }
+  }),
+)
+
+const recordMetaItems = computed(() => {
+  const items = [
+    holesText.value,
+    isFieldAverageRule.value ? '평균 기준' : '최저/최고타',
+    isSettlementExcluded.value ? '정산 제외' : '정산 반영',
+  ]
+
+  if (courseText.value) {
+    items.unshift(courseText.value)
+  }
+
+  if (typeof props.entry.averageAdjustedStrokes === 'number') {
+    items.push(`평균 보정 ${formatDecimal(props.entry.averageAdjustedStrokes)}타`)
+  }
+
+  return items
+})
+
+const toggleExpanded = () => {
+  isExpanded.value = !isExpanded.value
+}
 </script>
 
 <template>
@@ -108,6 +257,15 @@ const stateText = computed(() => {
     <span class="history-item__state">{{ stateText }}</span>
     <div class="history-item__actions">
       <button
+        v-if="hasScores"
+        class="history-item__button"
+        type="button"
+        :aria-expanded="isExpanded"
+        @click="toggleExpanded"
+      >
+        {{ isExpanded ? '기록 닫기' : '기록 보기' }}
+      </button>
+      <button
         v-if="!hasScores"
         class="history-item__button"
         type="button"
@@ -122,6 +280,57 @@ const stateText = computed(() => {
       >
         삭제
       </button>
+    </div>
+
+    <div v-if="hasScores && isExpanded" class="round-record" aria-label="라운드 상세 기록">
+      <div class="round-record__meta">
+        <span v-for="metaItem in recordMetaItems" :key="metaItem">{{ metaItem }}</span>
+      </div>
+
+      <div class="round-record__table-wrap">
+        <table class="round-record__table">
+          <thead>
+            <tr>
+              <th scope="col">참가자</th>
+              <th scope="col">입력</th>
+              <th scope="col">핸디</th>
+              <th scope="col">보정</th>
+              <th scope="col">평균차</th>
+              <th scope="col">부담</th>
+              <th scope="col">핸디 변화</th>
+              <th scope="col">금액 변화</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in scoreRecordRows" :key="row.id">
+              <th scope="row">{{ row.name }}</th>
+              <td>{{ row.strokesText }}</td>
+              <td>{{ row.handicapAppliedText }}</td>
+              <td>{{ row.adjustedStrokesText }}</td>
+              <td>{{ row.differenceText }}</td>
+              <td
+                class="round-record__delta"
+                :class="{
+                  'round-record__delta--up': row.shareDelta > 0,
+                  'round-record__delta--down': row.shareDelta < 0,
+                }"
+              >
+                {{ row.shareChangeText }}
+              </td>
+              <td>{{ row.handicapChangeText }}</td>
+              <td
+                class="round-record__delta"
+                :class="{
+                  'round-record__delta--up': row.costDelta > 0,
+                  'round-record__delta--down': row.costDelta < 0,
+                }"
+              >
+                {{ row.costChangeText }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </li>
 </template>
@@ -222,6 +431,90 @@ const stateText = computed(() => {
   }
 }
 
+.round-record {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(7, 137, 135, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.round-record__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 9px;
+    border: 1px solid rgba(34, 58, 50, 0.1);
+    border-radius: var(--radius-full);
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 800;
+    background: var(--surface-muted);
+    white-space: nowrap;
+  }
+}
+
+.round-record__table-wrap {
+  overflow-x: auto;
+}
+
+.round-record__table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 9px 10px;
+    border-bottom: 1px solid rgba(34, 58, 50, 0.08);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  thead th {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    background: rgba(237, 245, 241, 0.84);
+  }
+
+  th:first-child,
+  td:first-child {
+    text-align: left;
+  }
+
+  tbody th {
+    color: var(--text);
+    font-weight: 900;
+  }
+
+  tbody tr:last-child th,
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.round-record__delta {
+  color: var(--muted);
+
+  &--up {
+    color: #9b3025;
+  }
+
+  &--down {
+    color: #087869;
+  }
+}
+
 @media (max-width: 720px) {
   .history-item {
     grid-template-columns: 36px minmax(0, 1fr);
@@ -236,6 +529,11 @@ const stateText = computed(() => {
   .history-item__actions {
     grid-column: 2;
     justify-content: flex-start;
+  }
+
+  .round-record {
+    grid-column: 1 / -1;
+    padding: 10px;
   }
 }
 </style>

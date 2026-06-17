@@ -26,6 +26,17 @@ const tabs = computed(() => [
     ],
   },
   {
+    label: '기록',
+    meta: '로그',
+    to: `/match/${matchId.value}/history`,
+    iconPaths: [
+      'M7 4.5h10',
+      'M7 9h10',
+      'M7 13.5h7',
+      'M5 3.5h14v17H5z',
+    ],
+  },
+  {
     label: '분석',
     meta: '비율',
     to: `/match/${matchId.value}/analysis`,
@@ -121,7 +132,7 @@ const isActiveTab = (to: string, exact = false) => {
   &__inner {
     position: relative;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 6px;
     width: min(100%, 920px);
     min-height: 72px;
