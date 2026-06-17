@@ -661,6 +661,14 @@ const normalizeStoredAppState = (storedValue: string): AppState => {
   return createDefaultAppState(legacyHistory)
 }
 
+export const normalizeAppStateValue = (storedValue: unknown): AppState => {
+  if (typeof storedValue === 'string') {
+    return normalizeStoredAppState(storedValue)
+  }
+
+  return normalizeStoredAppState(JSON.stringify(storedValue))
+}
+
 export const loadStoredAppState = (): AppState => {
   if (!import.meta.client) {
     return createDefaultAppState()
@@ -673,7 +681,7 @@ export const loadStoredAppState = (): AppState => {
       return createDefaultAppState()
     }
 
-    return normalizeStoredAppState(savedValue)
+    return normalizeAppStateValue(savedValue)
   } catch (error) {
     console.warn('저장된 내기 정보를 불러오지 못했습니다.', error)
 

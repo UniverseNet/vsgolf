@@ -24,6 +24,13 @@ const appleSplashScreens = [
 export default defineNuxtConfig({
   compatibilityDate: '2025-06-09',
   ssr: false,
+  runtimeConfig: {
+    public: {
+      supabaseUrl: '',
+      supabaseAnonKey: '',
+      supabaseBoardId: 'default',
+    },
+  },
   experimental: {
     viteEnvironmentApi: true,
   },

@@ -1,10 +1,24 @@
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
-const { activeMatch, saveStatusText, saveStatusAnimating } = useBetBoardContext()
+const {
+  activeMatch,
+  saveStatusText,
+  saveStatusAnimating,
+  isRemoteStoreEnabled,
+  isRemoteStoreConnected,
+} = useBetBoardContext()
 
 const isHome = computed(() => route.name === 'index')
 const isMatchRoute = computed(() => Boolean(route.params.id))
+const storageStatusText = computed(() => {
+  if (!isRemoteStoreEnabled.value) {
+    return '개인 저장'
+  }
+
+  return isRemoteStoreConnected.value ? '실시간 공유' : '공유 연결 확인'
+})
+const headerStatusText = computed(() => `${storageStatusText.value} · ${saveStatusText.value}`)
 
 const pageTitle = computed(() => {
   if (isHome.value) {
@@ -45,8 +59,16 @@ const goBack = () => {
         </div>
       </div>
 
-      <output class="app-header__status" :class="{ 'is-value-changing': saveStatusAnimating }">
-        {{ saveStatusText }}
+      <output
+        class="app-header__status"
+        :class="{
+          'app-header__status--remote': isRemoteStoreEnabled,
+          'app-header__status--offline': isRemoteStoreEnabled && !isRemoteStoreConnected,
+          'is-value-changing': saveStatusAnimating,
+        }"
+        aria-label="저장 상태"
+      >
+        {{ headerStatusText }}
       </output>
     </div>
   </header>
@@ -88,7 +110,7 @@ const goBack = () => {
   &__logo {
     font-size: 1.15rem;
     font-weight: 800;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
     color: var(--pine);
   }
 
@@ -133,10 +155,20 @@ const goBack = () => {
       height: 6px;
       margin-right: 6px;
       border-radius: 50%;
-      background: var(--mint);
+      background: #94a3b8;
       content: '';
     }
+  }
 
+  &__status--remote::before {
+    background: var(--mint);
+  }
+
+  &__status--offline::before {
+    background: #f59e0b;
+  }
+
+  &__status {
     &.is-value-changing::before {
       animation: save-pulse 700ms ease-in-out;
     }

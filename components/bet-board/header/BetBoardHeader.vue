@@ -1,5 +1,20 @@
 <script setup lang="ts">
-const { activeMatch, matchState, saveStatusText, saveStatusAnimating } = useBetBoardContext()
+const {
+  activeMatch,
+  matchState,
+  saveStatusText,
+  saveStatusAnimating,
+  isRemoteStoreEnabled,
+  isRemoteStoreConnected,
+} = useBetBoardContext()
+
+const storageStatusText = computed(() => {
+  if (!isRemoteStoreEnabled.value) {
+    return '개인 저장'
+  }
+
+  return isRemoteStoreConnected.value ? '실시간 공유' : '공유 연결 확인'
+})
 </script>
 
 <template>
@@ -20,6 +35,15 @@ const { activeMatch, matchState, saveStatusText, saveStatusAnimating } = useBetB
         {{ (activeMatch?.participants.length ?? 0) >= 3 ? '다인전' : '1:1' }}
       </output>
       <output class="status-pill">참가자 {{ activeMatch?.participants.length ?? 0 }}명</output>
+      <output
+        class="status-pill status-pill--storage"
+        :class="{
+          'status-pill--remote': isRemoteStoreEnabled,
+          'status-pill--offline': isRemoteStoreEnabled && !isRemoteStoreConnected,
+        }"
+      >
+        {{ storageStatusText }}
+      </output>
       <output class="save-status" :class="{ 'is-value-changing': saveStatusAnimating }">
         {{ saveStatusText }}
       </output>
@@ -159,6 +183,25 @@ const { activeMatch, matchState, saveStatusText, saveStatusAnimating } = useBetB
 .status-pill--active {
   color: #073f3c;
   background: linear-gradient(135deg, rgba(78, 223, 167, 0.94), rgba(255, 231, 158, 0.9));
+}
+
+.status-pill--storage::before {
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  content: '';
+}
+
+.status-pill--remote::before {
+  background: var(--mint);
+  box-shadow: 0 0 0 4px rgba(56, 201, 141, 0.18);
+}
+
+.status-pill--offline::before {
+  background: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.16);
 }
 
 .save-status::before {
