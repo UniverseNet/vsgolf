@@ -16,7 +16,7 @@ onMounted(() => {
   <div class="match-page" :class="{ 'is-round-feedback': boardRoundFeedback }">
     <PageIntro
       eyebrow="Overview"
-      title="경기 개요"
+      title="내기 개요"
       description="현재 부담 비율과 진행 상황을 한눈에 확인하세요."
     />
 

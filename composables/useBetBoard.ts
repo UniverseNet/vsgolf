@@ -658,7 +658,7 @@ export const useBetBoard = () => {
 
   const createMatch = (): string | null => {
     if (appState.value.matches.length >= MAX_MATCHES) {
-      flashSaveStatus(`경기는 최대 ${MAX_MATCHES}개까지`)
+      flashSaveStatus(`내기는 최대 ${MAX_MATCHES}개까지`)
       return null
     }
 
@@ -676,7 +676,7 @@ export const useBetBoard = () => {
     clearRoundInputs()
     newParticipantName.value = ''
     newParticipantHandicap.value = String(DEFAULT_INITIAL_HANDICAP)
-    persistState('새 경기 생성됨')
+    persistState('새 내기 생성됨')
 
     return nextMatch.id
   }
@@ -695,7 +695,7 @@ export const useBetBoard = () => {
     }
     syncDinnerPriceFromActiveMatch()
     clearRoundInputs()
-    persistState('경기 전환됨')
+    persistState('내기 전환됨')
   }
 
   const deleteMatch = (matchId: string) => {
@@ -704,7 +704,7 @@ export const useBetBoard = () => {
     }
 
     if (appState.value.matches.length <= 1) {
-      flashSaveStatus('마지막 경기는 삭제할 수 없습니다')
+      flashSaveStatus('마지막 내기는 삭제할 수 없습니다')
       return
     }
 
@@ -726,7 +726,7 @@ export const useBetBoard = () => {
     }
     syncDinnerPriceFromActiveMatch()
     clearRoundInputs()
-    persistState('경기 삭제됨')
+    persistState('내기 삭제됨')
   }
 
   const updateSessionTitle = () => {

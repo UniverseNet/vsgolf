@@ -20,16 +20,16 @@ const deleteLabel = (matchId: string) =>
 </script>
 
 <template>
-  <section class="match-panel" aria-label="경기 목록">
+  <section class="match-panel" aria-label="내기 목록">
     <div class="match-panel__header">
       <div>
-        <p class="match-panel__eyebrow">Matches</p>
-        <h2>내 경기</h2>
+        <p class="match-panel__eyebrow">Bets</p>
+        <h2>내기 목록</h2>
       </div>
       <output class="match-panel__count">{{ appState.matches.length }} / {{ MAX_MATCHES }}</output>
     </div>
 
-    <div class="match-list" aria-label="저장된 경기">
+    <div class="match-list" aria-label="저장된 내기">
       <article
         v-for="match in matchList"
         :key="match.id"
@@ -52,7 +52,7 @@ const deleteLabel = (matchId: string) =>
     </div>
 
     <button class="button button--neutral match-panel__create" type="button" @click="createMatch">
-      새 경기 만들기
+      새 내기 만들기
     </button>
   </section>
 </template>

@@ -25,7 +25,7 @@ const pageTitle = computed(() => {
     return 'VSGolf Bet'
   }
 
-  return activeMatch.value?.title ?? '경기'
+  return activeMatch.value?.title ?? '내기'
 })
 
 const goBack = () => {
@@ -54,7 +54,7 @@ const goBack = () => {
       <div class="app-header__brand">
         <NuxtLink v-if="isHome" to="/" class="app-header__logo">VSGolf</NuxtLink>
         <div v-else class="app-header__title-wrap">
-          <p class="app-header__eyebrow">Dinner Match</p>
+          <p class="app-header__eyebrow">Dinner Bet</p>
           <h1 class="app-header__title">{{ pageTitle }}</h1>
         </div>
       </div>

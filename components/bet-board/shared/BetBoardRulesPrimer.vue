@@ -57,7 +57,7 @@ const ruleHighlights = computed(() => [
   {
     label: '판정 기준',
     value: `±${FIELD_AVERAGE_MINOR_THRESHOLD}타 / ±${FIELD_AVERAGE_MAJOR_THRESHOLD}타`,
-    description: '평균 보정 타수와 비교',
+    description: '실제 타수에서 현재 핸디를 뺀 뒤 평균과 비교해 부담을 1점 또는 2점 조정',
   },
   {
     label: '최종 정산',

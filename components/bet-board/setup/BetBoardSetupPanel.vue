@@ -25,7 +25,7 @@ const participantGuideText = computed(() =>
 </script>
 
 <template>
-  <section class="setup-panel" aria-label="경기와 참가자 설정">
+  <section class="setup-panel" aria-label="내기와 참가자 설정">
     <div class="setup-summary">
       <output class="setup-summary__status">
         {{ activeMatch?.participants.length ?? 0 }}명 · 시작 핸디 평균 +{{ averageInitialHandicap.toFixed(1) }} ·
@@ -36,20 +36,20 @@ const participantGuideText = computed(() =>
 
     <div class="setup-grid setup-grid--session">
       <label class="setup-field" for="sessionTitleInput">
-        <span>경기 이름</span>
+        <span>내기 이름</span>
         <input
           id="sessionTitleInput"
           v-model="activeMatch!.title"
           type="text"
           maxlength="24"
-          placeholder="오늘 경기"
+          placeholder="오늘 내기"
           autocomplete="off"
           @change="updateSessionTitle"
         />
       </label>
 
       <label class="setup-field" for="sessionDateInput">
-        <span>경기 날짜</span>
+        <span>내기 날짜</span>
         <input
           id="sessionDateInput"
           v-model="activeMatch!.date"

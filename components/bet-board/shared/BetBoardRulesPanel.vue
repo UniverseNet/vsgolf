@@ -20,7 +20,7 @@ const copyStatusText = ref('룰 설명 복사')
 
 const participantRuleText = computed(() => {
   if (participantsWithCosts.value.length === 0) {
-    return '참가자를 추가하면 현재 경기의 핸디와 부담 점수가 표시됩니다.'
+    return '참가자를 추가하면 현재 내기의 핸디와 부담 점수가 표시됩니다.'
   }
 
   return participantsWithCosts.value
@@ -163,7 +163,7 @@ const copyRules = async () => {
       </button>
     </div>
 
-    <div class="rules-summary" aria-label="현재 경기 룰 요약">
+    <div class="rules-summary" aria-label="현재 내기 룰 요약">
       <article
         v-for="summaryItem in ruleSummaryItems"
         :key="summaryItem.label"

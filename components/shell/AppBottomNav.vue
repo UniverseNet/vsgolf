@@ -86,7 +86,7 @@ const isActiveTab = (to: string, exact = false) => {
 </script>
 
 <template>
-  <nav class="bottom-nav" aria-label="경기 메뉴">
+  <nav class="bottom-nav" aria-label="내기 메뉴">
     <div class="bottom-nav__inner">
       <NuxtLink
         v-for="tab in tabs"

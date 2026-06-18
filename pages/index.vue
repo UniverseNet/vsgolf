@@ -15,12 +15,12 @@ const draftMatch = computed(() =>
   matchList.value.find((match) => match.participants.length === 0 && match.history.length === 0),
 )
 
-const primaryActionLabel = computed(() => (draftMatch.value ? '첫 경기 설정하기' : '새 경기 시작'))
+const primaryActionLabel = computed(() => (draftMatch.value ? '첫 내기 설정하기' : '새 내기 시작'))
 
 const guideSteps = [
   {
     title: '참가자와 핸디 설정',
-    description: '경기 이름을 정하고 최소 2명의 참가자와 시작 핸디를 입력합니다.',
+    description: '내기 이름을 정하고 최소 2명의 참가자와 시작 핸디를 입력합니다.',
   },
   {
     title: '라운드 타수 입력',
@@ -59,7 +59,7 @@ const onCreateMatch = () => {
       <p class="home-hero__eyebrow">Screen Golf Dinner Bet</p>
       <h1 class="home-hero__title">저녁내기 보드</h1>
       <p class="home-hero__description">
-        처음이라면 경기 설정부터 시작하세요. 참가자, 라운드 타수, 정산까지 한 흐름으로
+        처음이라면 내기 설정부터 시작하세요. 참가자, 라운드 타수, 정산까지 한 흐름으로
         이어집니다.
       </p>
       <button class="home-hero__cta" type="button" @click="onCreateMatch">
@@ -70,7 +70,7 @@ const onCreateMatch = () => {
     <section class="home-guide" aria-labelledby="homeGuideTitle">
       <div class="home-guide__header">
         <p>Quick Start</p>
-        <h2 id="homeGuideTitle">오늘 경기 진행 순서</h2>
+        <h2 id="homeGuideTitle">오늘 내기 진행 순서</h2>
       </div>
 
       <ol class="home-guide__steps">
@@ -82,14 +82,14 @@ const onCreateMatch = () => {
       </ol>
     </section>
 
-    <section class="home-matches" aria-label="경기 목록">
+    <section class="home-matches" aria-label="내기 목록">
       <div class="home-matches__header">
-        <h2>내 경기</h2>
+        <h2>내기 목록</h2>
         <span>{{ appState.matches.length }} / {{ MAX_MATCHES }}</span>
       </div>
 
       <div v-if="matchList.length === 0" class="home-empty">
-        아직 등록된 경기가 없습니다. 새 경기를 만들어 시작하세요.
+        아직 등록된 내기가 없습니다. 새 내기를 만들어 시작하세요.
       </div>
 
       <article v-for="match in matchList" :key="match.id" class="match-card">

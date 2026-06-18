@@ -141,7 +141,7 @@ const statusTextMap: Record<GuideStepStatus, string> = {
       </div>
     </div>
 
-    <ol class="progress-guide__steps" aria-label="경기 진행 단계">
+    <ol class="progress-guide__steps" aria-label="내기 진행 단계">
       <li
         v-for="(step, index) in guideSteps"
         :key="step.key"

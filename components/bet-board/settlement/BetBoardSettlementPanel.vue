@@ -24,7 +24,7 @@ const {
 
     <div class="settlement-grid">
       <article class="settlement-card settlement-card--wide">
-        <span>현재 경기</span>
+        <span>현재 내기</span>
         <strong>{{ activeMatch?.title ?? '-' }}</strong>
         <small>{{ activeMatch ? getSessionMetaText(activeMatch) : '-' }}</small>
       </article>

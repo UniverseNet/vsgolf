@@ -7,7 +7,7 @@ const canStartRound = computed(() => (activeMatch.value?.participants.length ?? 
 const followUpLink = computed(() =>
   canStartRound.value ? `/match/${route.params.id}/play` : `/match/${route.params.id}`,
 )
-const followUpLabel = computed(() => (canStartRound.value ? '라운드 입력으로 이동 →' : '경기 개요로 이동 →'))
+const followUpLabel = computed(() => (canStartRound.value ? '라운드 입력으로 이동 →' : '내기 개요로 이동 →'))
 
 onMounted(() => {
   const matchId = route.params.id as string
@@ -22,8 +22,8 @@ onMounted(() => {
   <div class="match-page">
     <PageIntro
       eyebrow="Setup"
-      title="경기 · 참가자 설정"
-      description="경기 정보와 참가자를 관리합니다."
+      title="내기 · 참가자 설정"
+      description="내기 정보와 참가자를 관리합니다."
     />
     <BetBoardSetupPanel />
     <NuxtLink :to="followUpLink" class="history-link">
