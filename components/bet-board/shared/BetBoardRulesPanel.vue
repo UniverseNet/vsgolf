@@ -24,7 +24,7 @@ const participantRuleText = computed(() => {
   }
 
   return participantsWithCosts.value
-    .map((participant) => `${participant.name} 시작 핸디 +${participant.initialHandicap}`)
+    .map((participant) => `${participant.name} +${participant.initialHandicap}`)
     .join(' · ')
 })
 
@@ -33,9 +33,18 @@ const currentShareText = computed(() => {
     return '-'
   }
 
+  const [firstParticipant] = participantsWithCosts.value
+  const hasSameShare = participantsWithCosts.value.every(
+    (participant) => participant.share === firstParticipant?.share,
+  )
+
+  if (hasSameShare && firstParticipant) {
+    return `모두 ${firstParticipant.share}점`
+  }
+
   return participantsWithCosts.value
     .map((participant) => `${participant.name} ${participant.share}점`)
-    .join(' : ')
+    .join(' · ')
 })
 
 const ruleSummaryItems = computed(() => [

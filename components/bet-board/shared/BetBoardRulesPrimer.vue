@@ -326,12 +326,29 @@ const copyRules = async () => {
 
 @media (min-width: 900px) {
   .rules-primer {
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.78fr);
+    grid-template-columns: minmax(0, 0.92fr) minmax(520px, 0.8fr);
     align-items: center;
     padding: 20px;
 
     &__actions {
       max-width: 420px;
+    }
+
+    &__highlights {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    &__highlight {
+      min-height: 88px;
+
+      &:nth-child(2) {
+        grid-column: 1 / -1;
+        order: 3;
+      }
+
+      &:nth-child(3) {
+        order: 2;
+      }
     }
   }
 }

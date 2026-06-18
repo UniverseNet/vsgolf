@@ -41,11 +41,11 @@ const myStatusStyle = computed(() => ({
   '--my-status-percent': `${myParticipantSummary.value?.participant.percent ?? 0}%`,
 }))
 
-const latestChangeMetaText = computed(() => {
+const latestChangeMetaItems = computed(() => {
   const latestChange = myParticipantSummary.value?.latestChange
 
   if (!latestChange) {
-    return '정산 반영 전'
+    return ['정산 반영 전']
   }
 
   const adjustedStrokeText = formatStrokeValue(latestChange.adjustedStrokes)
@@ -62,7 +62,6 @@ const latestChangeMetaText = computed(() => {
     `핸디 ${formatSignedNumber(latestChange.handicapDelta)}`,
   ]
     .filter(Boolean)
-    .join(' · ')
 })
 
 const onSelectMyParticipant = (event: Event) => {
@@ -131,7 +130,9 @@ const onSelectMyParticipant = (event: Event) => {
           >
             {{ myParticipantSummary.latestChange ? formatSignedWon(myParticipantSummary.latestChange.costDelta) : '0원' }}
           </strong>
-          <small>{{ latestChangeMetaText }}</small>
+          <small class="my-status__latest-meta">
+            <span v-for="metaItem in latestChangeMetaItems" :key="metaItem">{{ metaItem }}</span>
+          </small>
         </article>
       </div>
     </div>
@@ -285,6 +286,18 @@ const onSelectMyParticipant = (event: Event) => {
   }
 }
 
+.my-status__latest-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+
+  span {
+    display: inline-flex;
+    min-width: 0;
+    white-space: nowrap;
+  }
+}
+
 .is-increase {
   color: #7a2018 !important;
 }
@@ -344,6 +357,10 @@ const onSelectMyParticipant = (event: Event) => {
 @media (min-width: 1024px) {
   .my-status {
     padding: 20px;
+  }
+
+  .my-status__metrics {
+    grid-template-columns: minmax(130px, 0.9fr) minmax(130px, 0.9fr) minmax(220px, 1.35fr);
   }
 
   .my-status__hero strong {
