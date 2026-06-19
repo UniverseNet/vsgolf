@@ -1,4 +1,4 @@
-export const APP_VERSION = 9
+export const APP_VERSION = 10
 export const DEFAULT_INITIAL_HANDICAP = 10
 export const DEFAULT_PARTICIPANT_SHARE = 5
 export const DEFAULT_MY_NAME = '나'
@@ -14,6 +14,10 @@ export const MAX_MATCHES = 12
 export const STORAGE_KEY = 'vsgolf:dinner-bet-history'
 export const ROUND_RULE_STROKE_EXTREMES = 'stroke-extremes'
 export const ROUND_RULE_FIELD_AVERAGE = 'field-average'
+export const SETTLEMENT_MODE_SHARE_RATIO = 'share-ratio'
+export const SETTLEMENT_MODE_RANK_FUND = 'rank-fund'
+export const DEFAULT_FUND_ROUND_AMOUNT = 10000
+export const DEFAULT_FUND_RANK_ALLOCATIONS = [2000, 3000, 5000] as const
 export const ROUND_COMPLETION_STATUS_COMPLETED = 'completed'
 export const ROUND_COMPLETION_STATUS_PARTIAL = 'partial'
 export const PARTIAL_ROUND_POLICY_EXCLUDE = 'exclude'

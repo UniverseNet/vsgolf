@@ -2,8 +2,10 @@
 const {
   activeMatch,
   matchState,
+  isRankFundMode,
   participantsWithCosts,
   shareRatioText,
+  settlementModeText,
   settlementSummary,
   lowestBurdenParticipant,
   leadingParticipant,
@@ -29,11 +31,11 @@ const {
         <small>{{ activeMatch ? getSessionMetaText(activeMatch) : '-' }}</small>
       </article>
       <article class="settlement-card">
-        <span>최종 비율</span>
-        <strong>{{ shareRatioText }}</strong>
+        <span>{{ isRankFundMode ? '정산 방식' : '최종 비율' }}</span>
+        <strong>{{ isRankFundMode ? settlementModeText : shareRatioText }}</strong>
       </article>
       <article class="settlement-card">
-        <span>총 저녁값</span>
+        <span>{{ isRankFundMode ? '목표 적립금' : '총 저녁값' }}</span>
         <strong>{{ formatWon(dinnerPrice) }}</strong>
       </article>
       <article class="settlement-card">
@@ -42,12 +44,13 @@ const {
         <small>기록 {{ matchState.recordedRoundCount }}R · 제외 {{ matchState.excludedRoundCount }}R</small>
       </article>
       <article class="settlement-card">
-        <span>최소 정산</span>
+        <span>{{ isRankFundMode ? '최소 적립' : '최소 정산' }}</span>
         <strong>{{ lowestBurdenParticipant ? formatWon(lowestBurdenParticipant.cost) : '-' }}</strong>
       </article>
       <article class="settlement-card">
-        <span>최다 부담</span>
+        <span>{{ isRankFundMode ? '최다 적립' : '최다 부담' }}</span>
         <strong>{{ leadingParticipant?.name ?? '-' }}</strong>
+        <small v-if="isRankFundMode">현재 적립 {{ formatWon(matchState.totalFundAmount) }}</small>
       </article>
     </div>
 
@@ -56,7 +59,12 @@ const {
         <span>{{ participant.name }}</span>
         <strong>{{ formatWon(participant.cost) }}</strong>
         <small>
-          {{ participant.share }}점 · {{ participant.percent.toFixed(1) }}% · 핸디 +{{ participant.handicap }}
+          <template v-if="isRankFundMode">
+            누적 적립 · {{ participant.percent.toFixed(1) }}% · 핸디 +{{ participant.handicap }}
+          </template>
+          <template v-else>
+            {{ participant.share }}점 · {{ participant.percent.toFixed(1) }}% · 핸디 +{{ participant.handicap }}
+          </template>
         </small>
       </article>
     </div>

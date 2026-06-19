@@ -1,5 +1,6 @@
 import type {
   AppState,
+  FundRule,
   Match,
   PartialRoundPolicy,
   Participant,
@@ -12,6 +13,8 @@ import type {
 import {
   APP_VERSION,
   DEFAULT_DINNER_PRICE,
+  DEFAULT_FUND_RANK_ALLOCATIONS,
+  DEFAULT_FUND_ROUND_AMOUNT,
   DEFAULT_INITIAL_HANDICAP,
   DEFAULT_MY_NAME,
   DEFAULT_OPPONENT_NAME,
@@ -27,6 +30,8 @@ import {
   ROUND_COMPLETION_STATUS_PARTIAL,
   ROUND_RULE_FIELD_AVERAGE,
   ROUND_RULE_STROKE_EXTREMES,
+  SETTLEMENT_MODE_RANK_FUND,
+  SETTLEMENT_MODE_SHARE_RATIO,
   TOTAL_ROUND_HOLES,
 } from './constants'
 import { getStrokeRoundOutcome } from './match'
@@ -99,6 +104,81 @@ export const normalizeShare = (share: unknown) => {
   }
 
   return Math.round(numericShare)
+}
+
+export const normalizeFundAmount = (amount: unknown, fallback = DEFAULT_FUND_ROUND_AMOUNT) => {
+  const numericAmount = Number(amount)
+
+  if (!Number.isFinite(numericAmount) || numericAmount < 0) {
+    return fallback
+  }
+
+  return Math.round(numericAmount)
+}
+
+export const normalizeSettlementMode = (mode: unknown) =>
+  mode === SETTLEMENT_MODE_RANK_FUND ? SETTLEMENT_MODE_RANK_FUND : SETTLEMENT_MODE_SHARE_RATIO
+
+/**
+ * 참가자 수와 라운드 적립금에 맞는 기본 순위별 적립액을 생성합니다.
+ */
+export const createDefaultFundRankAllocations = (
+  roundAmount: number = DEFAULT_FUND_ROUND_AMOUNT,
+  participantCount: number = DEFAULT_FUND_RANK_ALLOCATIONS.length,
+): number[] => {
+  const normalizedParticipantCount = Math.max(0, Math.round(Number(participantCount) || 0))
+  const normalizedRoundAmount = normalizeFundAmount(roundAmount)
+
+  if (normalizedParticipantCount === 0) {
+    return []
+  }
+
+  if (
+    normalizedParticipantCount === DEFAULT_FUND_RANK_ALLOCATIONS.length &&
+    normalizedRoundAmount === DEFAULT_FUND_ROUND_AMOUNT
+  ) {
+    return [...DEFAULT_FUND_RANK_ALLOCATIONS]
+  }
+
+  const weights =
+    normalizedParticipantCount === DEFAULT_FUND_RANK_ALLOCATIONS.length
+      ? [...DEFAULT_FUND_RANK_ALLOCATIONS]
+      : Array.from({ length: normalizedParticipantCount }, (_, index) => index + 1)
+  const totalWeight = weights.reduce((total, weight) => total + weight, 0) || 1
+  let allocatedAmount = 0
+
+  return weights.map((weight, index) => {
+    if (index === weights.length - 1) {
+      return Math.max(0, normalizedRoundAmount - allocatedAmount)
+    }
+
+    const amount = Math.max(0, Math.round((normalizedRoundAmount * weight) / totalWeight))
+    allocatedAmount += amount
+
+    return amount
+  })
+}
+
+/**
+ * 저장된 적립 룰을 현재 참가자 수 기준으로 안전하게 보정합니다.
+ */
+export const normalizeFundRule = (
+  rule: unknown,
+  participantCount: number = DEFAULT_FUND_RANK_ALLOCATIONS.length,
+): FundRule => {
+  const storedRule = rule && typeof rule === 'object' ? (rule as Partial<FundRule>) : {}
+  const roundAmount = normalizeFundAmount(storedRule.roundAmount)
+  const fallbackRankAllocations = createDefaultFundRankAllocations(roundAmount, participantCount)
+  const normalizedRankAllocations = Array.isArray(storedRule.rankAllocations)
+    ? fallbackRankAllocations.map((fallbackAmount, index) =>
+        normalizeFundAmount(storedRule.rankAllocations?.[index], fallbackAmount),
+      )
+    : fallbackRankAllocations
+
+  return {
+    roundAmount,
+    rankAllocations: normalizedRankAllocations,
+  }
 }
 
 export const normalizeStroke = (stroke: unknown): number | null => {
@@ -327,6 +407,7 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
       holesPlayed?: unknown
       completionStatus?: string
       partialRoundPolicy?: string
+      fundRule?: unknown
       rule?: string
     }
 
@@ -346,12 +427,13 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
       completionStatus,
       ...(partialRoundPolicy ? { partialRoundPolicy } : {}),
     })
+    const withFundRule = <T extends RoundEntry>(roundEntry: T, fundParticipantCount = participants.length): T =>
+      e.fundRule ? { ...roundEntry, fundRule: normalizeFundRule(e.fundRule, fundParticipantCount) } : roundEntry
 
     if (Array.isArray(e.scores)) {
       const scores = normalizeScoreEntries(e.scores, participantIds)
-      const scoreParticipantIds = new Set(scores.map((score) => score.participantId))
 
-      if (!participants.every((participant) => scoreParticipantIds.has(participant.id))) {
+      if (scores.length < MIN_PARTICIPANTS) {
         return normalizedHistory
       }
 
@@ -359,15 +441,18 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
 
       return [
         ...normalizedHistory,
-        withCourseName(
-          withRoundCompletion({
-            round: normalizedHistory.length + 1,
-            scores,
-            isDraw: outcome.isDraw,
-            loserId: outcome.loserId,
-            rule,
-            winnerId: outcome.winnerId,
-          }),
+        withFundRule(
+          withCourseName(
+            withRoundCompletion({
+              round: normalizedHistory.length + 1,
+              scores,
+              isDraw: outcome.isDraw,
+              loserId: outcome.loserId,
+              rule,
+              winnerId: outcome.winnerId,
+            }),
+          ),
+          scores.length,
         ),
       ]
     }
@@ -378,13 +463,15 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
 
       return [
         ...normalizedHistory,
-        withCourseName(
-          withRoundCompletion({
-            round: normalizedHistory.length + 1,
-            winnerId,
-            loserId,
-            rule: ROUND_RULE_STROKE_EXTREMES,
-          }),
+        withFundRule(
+          withCourseName(
+            withRoundCompletion({
+              round: normalizedHistory.length + 1,
+              winnerId,
+              loserId,
+              rule: ROUND_RULE_STROKE_EXTREMES,
+            }),
+          ),
         ),
       ]
     }
@@ -399,8 +486,9 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
       return normalizedHistory
     }
 
-    return [
-      ...normalizedHistory,
+  return [
+    ...normalizedHistory,
+    withFundRule(
       withCourseName(
         withRoundCompletion({
           round: normalizedHistory.length + 1,
@@ -409,7 +497,8 @@ export const normalizeRoundHistory = (storedHistory: unknown, participants: Part
           rule,
         }),
       ),
-    ]
+    ),
+  ]
   }, [])
 }
 
@@ -483,6 +572,8 @@ export const createDefaultMatch = ({
   title,
   date,
   dinnerPrice,
+  settlementMode,
+  fundRule,
   myParticipantId,
   participants,
   history,
@@ -490,6 +581,8 @@ export const createDefaultMatch = ({
   title?: unknown
   date?: string
   dinnerPrice?: unknown
+  settlementMode?: unknown
+  fundRule?: unknown
   myParticipantId?: unknown
   participants?: Participant[]
   history?: RoundEntry[]
@@ -497,12 +590,15 @@ export const createDefaultMatch = ({
   const session = createDefaultSession()
   const normalizedParticipants = participants ?? []
   const normalizedMyParticipantId = normalizeMatchMyParticipantId(myParticipantId, normalizedParticipants)
+  const normalizedSettlementMode = normalizeSettlementMode(settlementMode)
 
   return {
     id: session.id,
     title: normalizeSessionTitle(title ?? session.title),
     date: date ?? session.date,
     dinnerPrice: normalizeDinnerPrice(dinnerPrice ?? session.dinnerPrice),
+    settlementMode: normalizedSettlementMode,
+    fundRule: normalizeFundRule(fundRule, normalizedParticipants.length),
     ...(normalizedMyParticipantId ? { myParticipantId: normalizedMyParticipantId } : {}),
     participants: normalizedParticipants,
     history: history ?? [],
@@ -519,12 +615,15 @@ const normalizeStoredMatch = (storedMatch: unknown): Match | null => {
   const participants = normalizeStoredParticipants(match.participants)
   const session = normalizeStoredSession(match)
   const myParticipantId = normalizeMatchMyParticipantId(match.myParticipantId, participants)
+  const settlementMode = normalizeSettlementMode(match.settlementMode)
 
   return {
     id: session.id,
     title: session.title,
     date: session.date,
     dinnerPrice: session.dinnerPrice,
+    settlementMode,
+    fundRule: normalizeFundRule(match.fundRule, participants.length),
     ...(myParticipantId ? { myParticipantId } : {}),
     participants,
     history: normalizeRoundHistory(match.history, participants),
@@ -568,6 +667,8 @@ const createMatchFromLegacyBoard = ({
   title: session.title,
   date: session.date,
   dinnerPrice: session.dinnerPrice,
+  settlementMode: SETTLEMENT_MODE_SHARE_RATIO,
+  fundRule: normalizeFundRule(undefined, participants.length),
   ...(participants[0]?.id ? { myParticipantId: participants[0].id } : {}),
   participants,
   history: normalizeRoundHistory(history, participants),
@@ -626,6 +727,7 @@ const normalizeStoredAppState = (storedValue: string): AppState => {
 
   if (
     parsedValue?.version === APP_VERSION ||
+    parsedValue?.version === 9 ||
     parsedValue?.version === 8 ||
     parsedValue?.version === 7 ||
     parsedValue?.version === 6
@@ -695,12 +797,15 @@ export const serializeAppState = (state: AppState) =>
     activeMatchId: state.activeMatchId,
     matches: state.matches.map((match) => {
       const myParticipantId = normalizeMatchMyParticipantId(match.myParticipantId, match.participants)
+      const settlementMode = normalizeSettlementMode(match.settlementMode)
 
       return {
         id: match.id,
         title: match.title,
         date: match.date,
         dinnerPrice: match.dinnerPrice,
+        settlementMode,
+        fundRule: normalizeFundRule(match.fundRule, match.participants.length),
         ...(myParticipantId ? { myParticipantId } : {}),
         participants: match.participants.map((participant) => ({
           id: participant.id,

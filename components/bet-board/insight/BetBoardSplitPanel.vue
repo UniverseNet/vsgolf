@@ -1,19 +1,28 @@
 <script setup lang="ts">
 const {
+  matchState,
+  isRankFundMode,
   participantsWithCosts,
   shareRatioText,
   dinnerPriceDisplay,
+  dinnerPrice,
   updateDinnerPrice,
   adjustDinnerPrice,
   setQuickDinnerPrice,
   splitSegmentStyle,
   formatWon,
 } = useBetBoardContext()
+
+const splitSummaryText = computed(() =>
+  isRankFundMode.value
+    ? `현재 적립 ${formatWon(matchState.value.totalFundAmount)} / 목표 ${formatWon(dinnerPrice.value)}`
+    : shareRatioText.value,
+)
 </script>
 
 <template>
-  <section class="split-panel" aria-label="비용 부담 비율">
-    <p class="split-panel__ratio">{{ shareRatioText }}</p>
+  <section class="split-panel" aria-label="정산 현황">
+    <p class="split-panel__ratio">{{ splitSummaryText }}</p>
 
     <div class="split-bar" aria-hidden="true">
       <span
@@ -21,19 +30,24 @@ const {
         :key="participant.id"
         class="split-bar__segment"
         :style="splitSegmentStyle(participant, index)"
-        :title="`${participant.name} ${participant.percent.toFixed(1)}%`"
+        :title="isRankFundMode ? `${participant.name} ${formatWon(participant.cost)}` : `${participant.name} ${participant.percent.toFixed(1)}%`"
       />
     </div>
 
     <div class="split-panel__legend" aria-label="참가자별 색상">
       <span v-for="(participant, index) in participantsWithCosts" :key="participant.id">
         <i class="legend-dot" :style="{ background: splitSegmentStyle(participant, index).background }" />
-        {{ participant.name }} {{ participant.percent.toFixed(1) }}%
+        <template v-if="isRankFundMode">
+          {{ participant.name }} {{ formatWon(participant.cost) }}
+        </template>
+        <template v-else>
+          {{ participant.name }} {{ participant.percent.toFixed(1) }}%
+        </template>
       </span>
     </div>
 
     <label class="dinner-price" for="dinnerPriceInput">
-      <span>예상 저녁값</span>
+      <span>{{ isRankFundMode ? '목표 적립금' : '예상 저녁값' }}</span>
       <span class="price-input">
         <input
           id="dinnerPriceInput"
@@ -47,7 +61,7 @@ const {
       </span>
     </label>
 
-    <div class="quick-amounts" aria-label="저녁값 빠른 조정">
+    <div class="quick-amounts" :aria-label="isRankFundMode ? '목표 적립금 빠른 조정' : '저녁값 빠른 조정'">
       <button class="quick-amounts__button" type="button" @click="adjustDinnerPrice(-10000)">-1만</button>
       <button class="quick-amounts__button" type="button" @click="adjustDinnerPrice(10000)">+1만</button>
       <button class="quick-amounts__button" type="button" @click="setQuickDinnerPrice(50000)">5만</button>
@@ -58,7 +72,7 @@ const {
 
     <div class="amount-grid amount-grid--participants" aria-label="참가자별 예상 결제 금액">
       <article v-for="participant in participantsWithCosts" :key="participant.id" class="amount-grid__item">
-        <span>{{ participant.name }} 예상 결제</span>
+        <span>{{ participant.name }} {{ isRankFundMode ? '누적 적립' : '예상 결제' }}</span>
         <strong>{{ formatWon(participant.cost) }}</strong>
       </article>
     </div>

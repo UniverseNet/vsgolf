@@ -3,6 +3,7 @@ const {
   participantsWithCosts,
   myParticipantId,
   myParticipantSummary,
+  isRankFundMode,
   setMyParticipant,
   formatWon,
 } = useBetBoardContext()
@@ -58,7 +59,12 @@ const latestChangeMetaItems = computed(() => {
   return [
     latestChange.label,
     strokeText,
-    `부담 ${formatSignedNumber(latestChange.shareDelta, '점')}`,
+    isRankFundMode.value
+      ? latestChange.rank
+        ? `${latestChange.rank}등`
+        : '순위 -'
+      : `부담 ${formatSignedNumber(latestChange.shareDelta, '점')}`,
+    isRankFundMode.value ? `적립 ${formatSignedWon(latestChange.costDelta)}` : '',
     `핸디 ${formatSignedNumber(latestChange.handicapDelta)}`,
   ]
     .filter(Boolean)
@@ -74,7 +80,7 @@ const onSelectMyParticipant = (event: Event) => {
     <div class="my-status__header">
       <div>
         <p>My Bet</p>
-        <h2 id="myStatusTitle">내 부담 현황</h2>
+        <h2 id="myStatusTitle">{{ isRankFundMode ? '내 적립 현황' : '내 부담 현황' }}</h2>
       </div>
 
       <label v-if="participantsWithCosts.length > 1" class="my-status__selector" for="myParticipantSelect">
@@ -93,7 +99,7 @@ const onSelectMyParticipant = (event: Event) => {
 
     <div v-if="myParticipantSummary" class="my-status__body">
       <div class="my-status__hero">
-        <span>예상 결제</span>
+        <span>{{ isRankFundMode ? '내 누적 적립' : '예상 결제' }}</span>
         <strong>{{ formatWon(myParticipantSummary.participant.cost) }}</strong>
         <small :class="deltaClass(myParticipantSummary.costDelta)">
           시작 대비 {{ formatSignedWon(myParticipantSummary.costDelta) }}
@@ -115,11 +121,24 @@ const onSelectMyParticipant = (event: Event) => {
         </article>
 
         <article class="my-status__metric">
-          <span>부담 점수</span>
-          <strong>{{ myParticipantSummary.participant.share }}점</strong>
-          <small :class="deltaClass(myParticipantSummary.shareDelta)">
-            {{ myParticipantSummary.participant.percent.toFixed(1) }}% ·
-            {{ formatSignedNumber(myParticipantSummary.shareDelta, '점') }}
+          <span>{{ isRankFundMode ? '적립 비중' : '부담 점수' }}</span>
+          <strong>
+            <template v-if="isRankFundMode">
+              {{ myParticipantSummary.participant.percent.toFixed(1) }}%
+            </template>
+            <template v-else>
+              {{ myParticipantSummary.participant.share }}점
+            </template>
+          </strong>
+          <small :class="deltaClass(isRankFundMode ? myParticipantSummary.costDelta : myParticipantSummary.shareDelta)">
+            <template v-if="isRankFundMode">
+              목표 {{ myParticipantSummary.participant.targetPercent.toFixed(1) }}% ·
+              {{ formatWon(myParticipantSummary.participant.cost) }}
+            </template>
+            <template v-else>
+              {{ myParticipantSummary.participant.percent.toFixed(1) }}% ·
+              {{ formatSignedNumber(myParticipantSummary.shareDelta, '점') }}
+            </template>
           </small>
         </article>
 

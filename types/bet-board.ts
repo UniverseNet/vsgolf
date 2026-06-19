@@ -1,6 +1,12 @@
 export type RoundRule = 'stroke-extremes' | 'field-average'
 export type RoundCompletionStatus = 'completed' | 'partial'
 export type PartialRoundPolicy = 'exclude' | 'prorate'
+export type SettlementMode = 'share-ratio' | 'rank-fund'
+
+export interface FundRule {
+  roundAmount: number
+  rankAllocations: number[]
+}
 
 export interface Participant {
   id: string
@@ -28,6 +34,9 @@ export interface RoundScoreDetail extends ScoreEntry {
   differenceFromAverage?: number
   shareDelta?: number
   shareAfter?: number
+  fundRank?: number
+  fundAmountDelta?: number
+  fundAmountAfter?: number
   handicapDelta?: number
   handicapAfter?: number
 }
@@ -43,11 +52,13 @@ export interface RoundEntry {
   holesPlayed?: number
   completionStatus?: RoundCompletionStatus
   partialRoundPolicy?: PartialRoundPolicy
+  fundRule?: FundRule
 }
 
 export interface ParticipantState extends Participant {
   colorIndex: number
   share: number
+  fundAmount: number
   handicap: number
   wins: number
   losses: number
@@ -57,12 +68,14 @@ export interface ScoredRoundHistoryEntry {
   round: number
   isDraw: boolean
   rule?: RoundRule
+  settlementMode: SettlementMode
   courseName?: string
   holesPlayed: number
   completionStatus: RoundCompletionStatus
   partialRoundPolicy?: PartialRoundPolicy
   isSettlementExcluded: boolean
   isSettlementApplied: boolean
+  fundRoundAmount?: number
   loserId: string
   loserName: string
   loserShare: number
@@ -78,6 +91,7 @@ export interface ScoredRoundHistoryEntry {
 export interface ParticipantWithCost extends ParticipantState {
   cost: number
   percent: number
+  targetPercent: number
 }
 
 export interface SavedSessionParticipant {
@@ -103,6 +117,8 @@ export interface Match {
   title: string
   date: string
   dinnerPrice: number
+  settlementMode: SettlementMode
+  fundRule: FundRule
   myParticipantId?: string
   participants: Participant[]
   history: RoundEntry[]
@@ -120,10 +136,13 @@ export interface RoundScoreSummary {
   loserId?: string
   message: string
   rule?: RoundRule
+  settlementMode?: SettlementMode
   holesPlayed?: number
   completionStatus?: RoundCompletionStatus
   partialRoundPolicy?: PartialRoundPolicy
   isSettlementExcluded?: boolean
+  fundRoundAmount?: number
+  fundRule?: FundRule
   averageAdjustedStrokes?: number
   adjustments?: RoundScoreDetail[]
   winnerId?: string
@@ -133,7 +152,10 @@ export interface RoundScoreSummary {
 export interface MatchState {
   participants: ParticipantState[]
   history: ScoredRoundHistoryEntry[]
+  settlementMode: SettlementMode
+  fundRule: FundRule
   totalShare: number
+  totalFundAmount: number
   recordedRoundCount: number
   settlementRoundCount: number
   partialRoundCount: number

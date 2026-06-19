@@ -23,7 +23,7 @@ onMounted(() => {
     <PageIntro
       eyebrow="Setup"
       title="내기 · 참가자 설정"
-      description="내기 정보와 참가자를 관리합니다."
+      description="내기 정보, 정산 방식, 참가자를 관리합니다."
     />
     <BetBoardSetupPanel />
     <NuxtLink :to="followUpLink" class="history-link">

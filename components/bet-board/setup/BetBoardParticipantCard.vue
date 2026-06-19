@@ -13,7 +13,7 @@ const emit = defineEmits<{
   setMyParticipant: [participantId: string]
 }>()
 
-const { participantStyle, formatWon } = useBetBoardContext()
+const { isRankFundMode, participantStyle, formatWon } = useBetBoardContext()
 
 const deleteLabel = computed(() =>
   props.pendingDeleteId === props.participant.id ? '삭제 확인' : '삭제',
@@ -33,7 +33,12 @@ const deleteLabel = computed(() =>
       </span>
       <span>이득 {{ participant.wins }}R · 부담 {{ participant.losses }}R · 핸디 +{{ participant.handicap }}</span>
       <span class="participant-card__share">
-        부담 {{ participant.share }}점 · {{ participant.percent.toFixed(1) }}%
+        <template v-if="isRankFundMode">
+          누적 적립 {{ formatWon(participant.fundAmount) }} · {{ participant.percent.toFixed(1) }}%
+        </template>
+        <template v-else>
+          부담 {{ participant.share }}점 · {{ participant.percent.toFixed(1) }}%
+        </template>
       </span>
     </div>
     <strong class="participant-card__cost">{{ formatWon(participant.cost) }}</strong>

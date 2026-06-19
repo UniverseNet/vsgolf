@@ -10,7 +10,7 @@ interface GuideStep {
 }
 
 const route = useRoute()
-const { activeMatch, matchState, MIN_PARTICIPANTS } = useBetBoardContext()
+const { activeMatch, matchState, isRankFundMode, formatWon, MIN_PARTICIPANTS } = useBetBoardContext()
 
 const matchId = computed(() => route.params.id as string)
 const participantCount = computed(() => activeMatch.value?.participants.length ?? 0)
@@ -37,10 +37,14 @@ const panelDescription = computed(() => {
   }
 
   if (!hasRoundHistory.value) {
-    return '각 참가자의 실제 타수를 모두 입력하면 현재 핸디를 뺀 평균 보정 타수 기준으로 부담 점수가 누적됩니다.'
+    return isRankFundMode.value
+      ? '각 참가자의 실제 타수를 모두 입력하면 현재 핸디를 뺀 보정 타수 순위대로 라운드 적립금이 누적됩니다.'
+      : '각 참가자의 실제 타수를 모두 입력하면 현재 핸디를 뺀 평균 보정 타수 기준으로 부담 점수가 누적됩니다.'
   }
 
-  return '현재까지 정산에 반영된 라운드를 기준으로 부담 비율, 핸디 변화, 예상 결제 금액을 확인하세요.'
+  return isRankFundMode.value
+    ? `현재까지 ${formatWon(matchState.value.totalFundAmount)}이 적립되었습니다. 참가자별 누적 적립금과 핸디 변화를 확인하세요.`
+    : '현재까지 정산에 반영된 라운드를 기준으로 부담 비율, 핸디 변화, 예상 결제 금액을 확인하세요.'
 })
 
 const primaryAction = computed(() => {

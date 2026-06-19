@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
-const { appState } = useBetBoardContext()
+const { appState, isRankFundMode } = useBetBoardContext()
 
 onMounted(() => {
   const matchId = route.params.id as string
@@ -17,7 +17,7 @@ onMounted(() => {
     <PageIntro
       eyebrow="Round"
       title="라운드 입력"
-      description="참가자 타수를 입력하고 이번 라운드 결과를 저장하세요."
+      :description="isRankFundMode ? '참가자 타수를 입력하고 순위별 적립 결과를 저장하세요.' : '참가자 타수를 입력하고 이번 라운드 결과를 저장하세요.'"
     />
     <BetBoardMyStatusPanel />
     <BetBoardControlPanel />

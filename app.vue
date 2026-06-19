@@ -2,7 +2,7 @@
 const route = useRoute()
 const isLaunchScreenVisible = ref(false)
 const shouldRenderPwaManifest = !import.meta.dev
-let launchScreenTimer: ReturnType<typeof setTimeout> | null = null
+let launchScreenTimer: number | null = null
 
 const isStandaloneDisplay = () => {
   if (!import.meta.client) {

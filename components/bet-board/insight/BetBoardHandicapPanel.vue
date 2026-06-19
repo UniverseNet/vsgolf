@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { matchState, participantsWithCosts } = useBetBoardContext()
+const { matchState, isRankFundMode, participantsWithCosts } = useBetBoardContext()
 </script>
 
 <template>
@@ -19,15 +19,15 @@ const { matchState, participantsWithCosts } = useBetBoardContext()
     <div class="rule-grid" aria-label="조정 규칙">
       <article class="rule-grid__item rule-grid__item--win">
         <span>18홀 평균보다 3~5타 좋음</span>
-        <strong>부담 -1점 · 핸디 -1</strong>
+        <strong>{{ isRankFundMode ? '핸디 -1' : '부담 -1점 · 핸디 -1' }}</strong>
       </article>
       <article class="rule-grid__item rule-grid__item--lose">
         <span>18홀 평균보다 6타 이상 좋음</span>
-        <strong>부담 -2점 · 핸디 -2</strong>
+        <strong>{{ isRankFundMode ? '핸디 -2' : '부담 -2점 · 핸디 -2' }}</strong>
       </article>
       <article class="rule-grid__item rule-grid__item--warn">
         <span>18홀 평균보다 3~5타 나쁨</span>
-        <strong>부담 +1점 · 핸디 +1</strong>
+        <strong>{{ isRankFundMode ? '핸디 +1' : '부담 +1점 · 핸디 +1' }}</strong>
       </article>
       <article class="rule-grid__item rule-grid__item--lose">
         <span>중도 종료 부분 반영</span>

@@ -11,6 +11,10 @@ import {
 const {
   activeMatch,
   matchState,
+  isRankFundMode,
+  fundRule,
+  fundRankAllocationText,
+  settlementModeText,
   dinnerPrice,
   participantsWithCosts,
   formatWon,
@@ -20,7 +24,9 @@ const copyStatusText = ref('룰 설명 복사')
 
 const participantRuleText = computed(() => {
   if (participantsWithCosts.value.length === 0) {
-    return '참가자를 추가하면 현재 내기의 핸디와 부담 점수가 표시됩니다.'
+    return isRankFundMode.value
+      ? '참가자를 추가하면 현재 내기의 핸디와 적립 현황이 표시됩니다.'
+      : '참가자를 추가하면 현재 내기의 핸디와 부담 점수가 표시됩니다.'
   }
 
   return participantsWithCosts.value
@@ -54,14 +60,18 @@ const ruleSummaryItems = computed(() => [
     description: participantRuleText.value,
   },
   {
-    label: '식사비',
+    label: isRankFundMode.value ? '목표 적립금' : '식사비',
     value: formatWon(dinnerPrice.value),
-    description: '최종 부담 점수 비율로 나눕니다.',
+    description: isRankFundMode.value
+      ? `매 라운드 ${formatWon(fundRule.value.roundAmount)}씩 적립합니다.`
+      : '최종 부담 점수 비율로 나눕니다.',
   },
   {
-    label: '현재 부담',
-    value: currentShareText.value,
-    description: `시작은 모두 ${DEFAULT_PARTICIPANT_SHARE}점입니다.`,
+    label: isRankFundMode.value ? '순위 배분' : '현재 부담',
+    value: isRankFundMode.value ? settlementModeText.value : currentShareText.value,
+    description: isRankFundMode.value
+      ? fundRankAllocationText.value
+      : `시작은 모두 ${DEFAULT_PARTICIPANT_SHARE}점입니다.`,
   },
   {
     label: '기록',
@@ -70,38 +80,73 @@ const ruleSummaryItems = computed(() => [
   },
 ])
 
-const ruleSteps = [
-  {
-    number: '1',
-    title: '라운드가 끝나면 실제 타수를 입력합니다',
-    description:
-      '참가자별 스크린골프 실제 타수를 그대로 입력합니다. 골프장 이름은 선택 입력이고 기록 화면에서 다시 확인할 수 있습니다.',
-  },
-  {
-    number: '2',
-    title: '현재 핸디를 빼서 보정 타수를 계산합니다',
-    description:
-      '각자의 현재 핸디를 적용한 보정 타수로 평균을 냅니다. 중도 종료 라운드는 진행 홀 비율만큼 핸디를 줄여 계산합니다.',
-  },
-  {
-    number: '3',
-    title: '평균보다 잘 치면 부담이 줄고, 못 치면 늘어납니다',
-    description:
-      `평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 좋으면 -1점, ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 좋으면 -2점입니다. 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 나쁘면 +1점, ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 나쁘면 +2점입니다.`,
-  },
-  {
-    number: '4',
-    title: '부담 점수 변화는 핸디에도 같이 반영됩니다',
-    description:
-      '부담이 줄어든 사람은 다음 라운드 핸디가 낮아지고, 부담이 늘어난 사람은 다음 라운드 핸디가 올라갑니다.',
-  },
-  {
-    number: '5',
-    title: '마지막에는 부담 점수 비율로 식사비를 나눕니다',
-    description:
-      '현재 부담 점수 합계를 기준으로 각자의 결제 금액을 계산합니다. 기록에서 라운드별 금액 변화도 다시 볼 수 있습니다.',
-  },
-]
+const ruleSteps = computed(() =>
+  isRankFundMode.value
+    ? [
+        {
+          number: '1',
+          title: '라운드가 끝나면 실제 타수를 입력합니다',
+          description:
+            '참가자별 스크린골프 실제 타수를 그대로 입력합니다. 골프장 이름은 선택 입력이고 기록 화면에서 다시 확인할 수 있습니다.',
+        },
+        {
+          number: '2',
+          title: '현재 핸디를 빼서 보정 타수를 계산합니다',
+          description:
+            '각자의 현재 핸디를 적용한 보정 타수로 순위를 정합니다. 중도 종료 라운드는 진행 홀 비율만큼 핸디를 줄여 계산합니다.',
+        },
+        {
+          number: '3',
+          title: '보정 타수 순위대로 라운드 적립금을 나눕니다',
+          description:
+            `매 라운드 ${formatWon(fundRule.value.roundAmount)}을 ${fundRankAllocationText.value} 기준으로 누적합니다. 같은 순위가 나오면 해당 순위들의 금액을 나눕니다.`,
+        },
+        {
+          number: '4',
+          title: '핸디는 평균 대비 변화로 계속 보정합니다',
+          description:
+            `평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 차이가 나면 다음 라운드 핸디가 조정되어 순위 산정 기준에 반영됩니다.`,
+        },
+        {
+          number: '5',
+          title: '목표 적립금까지 누적 금액을 확인합니다',
+          description:
+            '정산 화면에서 참가자별 누적 적립액과 전체 목표 대비 진행 상황을 확인합니다.',
+        },
+      ]
+    : [
+        {
+          number: '1',
+          title: '라운드가 끝나면 실제 타수를 입력합니다',
+          description:
+            '참가자별 스크린골프 실제 타수를 그대로 입력합니다. 골프장 이름은 선택 입력이고 기록 화면에서 다시 확인할 수 있습니다.',
+        },
+        {
+          number: '2',
+          title: '현재 핸디를 빼서 보정 타수를 계산합니다',
+          description:
+            '각자의 현재 핸디를 적용한 보정 타수로 평균을 냅니다. 중도 종료 라운드는 진행 홀 비율만큼 핸디를 줄여 계산합니다.',
+        },
+        {
+          number: '3',
+          title: '평균보다 잘 치면 부담이 줄고, 못 치면 늘어납니다',
+          description:
+            `평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 좋으면 -1점, ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 좋으면 -2점입니다. 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 나쁘면 +1점, ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 나쁘면 +2점입니다.`,
+        },
+        {
+          number: '4',
+          title: '부담 점수 변화는 핸디에도 같이 반영됩니다',
+          description:
+            '부담이 줄어든 사람은 다음 라운드 핸디가 낮아지고, 부담이 늘어난 사람은 다음 라운드 핸디가 올라갑니다.',
+        },
+        {
+          number: '5',
+          title: '마지막에는 부담 점수 비율로 식사비를 나눕니다',
+          description:
+            '현재 부담 점수 합계를 기준으로 각자의 결제 금액을 계산합니다. 기록에서 라운드별 금액 변화도 다시 볼 수 있습니다.',
+        },
+      ],
+)
 
 const partialRoundRules = [
   {
@@ -118,32 +163,65 @@ const partialRoundRules = [
   },
 ]
 
-const exampleRows = [
-  {
-    situation: '평균보다 4타 좋음',
-    result: '부담 -1점 · 핸디 -1',
-  },
-  {
-    situation: '평균보다 7타 나쁨',
-    result: '부담 +2점 · 핸디 +2',
-  },
-  {
-    situation: '평균권',
-    result: '부담/핸디 변화 없음',
-  },
-]
+const exampleRows = computed(() =>
+  isRankFundMode.value
+    ? [
+        {
+          situation: '3명 기준 1등',
+          result: '2,000원 적립',
+        },
+        {
+          situation: '3명 기준 2등',
+          result: '3,000원 적립',
+        },
+        {
+          situation: '3명 기준 3등',
+          result: '5,000원 적립',
+        },
+      ]
+    : [
+        {
+          situation: '평균보다 4타 좋음',
+          result: '부담 -1점 · 핸디 -1',
+        },
+        {
+          situation: '평균보다 7타 나쁨',
+          result: '부담 +2점 · 핸디 +2',
+        },
+        {
+          situation: '평균권',
+          result: '부담/핸디 변화 없음',
+        },
+      ],
+)
 
-const rulesShareText = computed(() => [
-  `[${activeMatch.value?.title ?? 'VSGolf 내기'} 룰]`,
-  `1. 시작 부담은 모두 ${DEFAULT_PARTICIPANT_SHARE}점입니다.`,
-  `2. 매 라운드 실제 타수에서 현재 핸디를 뺀 보정 타수로 평균을 냅니다.`,
-  `3. 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 좋으면 -1점, ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 좋으면 -2점입니다.`,
-  `4. 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 나쁘면 +1점, ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 나쁘면 +2점입니다.`,
-  '5. 부담 점수 변화는 다음 라운드 핸디에도 같이 반영됩니다.',
-  '6. 중도 종료 라운드는 부분 반영 또는 정산 제외 중 선택합니다.',
-  `7. 최종 식사비 ${formatWon(dinnerPrice.value)}는 부담 점수 비율로 나눕니다.`,
-  participantsWithCosts.value.length > 0 ? `현재 참가자: ${participantRuleText.value}` : '',
-].filter(Boolean).join('\n'))
+const rulesShareText = computed(() => {
+  if (isRankFundMode.value) {
+    return [
+      `[${activeMatch.value?.title ?? 'VSGolf 내기'} 룰]`,
+      `1. 정산 방식은 ${settlementModeText.value}입니다.`,
+      '2. 매 라운드 실제 타수에서 현재 핸디를 뺀 보정 타수로 순위를 정합니다.',
+      `3. 매 라운드 ${formatWon(fundRule.value.roundAmount)}을 순위별로 적립합니다.`,
+      `4. 순위별 배분은 ${fundRankAllocationText.value}입니다.`,
+      '5. 같은 순위가 나오면 해당 순위들의 적립액을 나눠 반영합니다.',
+      '6. 중도 종료 라운드는 부분 반영 또는 정산 제외 중 선택합니다.',
+      `7. 목표 적립금은 ${formatWon(dinnerPrice.value)}입니다.`,
+      participantsWithCosts.value.length > 0 ? `현재 참가자: ${participantRuleText.value}` : '',
+    ].filter(Boolean).join('\n')
+  }
+
+  return [
+    `[${activeMatch.value?.title ?? 'VSGolf 내기'} 룰]`,
+    `1. 시작 부담은 모두 ${DEFAULT_PARTICIPANT_SHARE}점입니다.`,
+    `2. 매 라운드 실제 타수에서 현재 핸디를 뺀 보정 타수로 평균을 냅니다.`,
+    `3. 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 좋으면 -1점, ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 좋으면 -2점입니다.`,
+    `4. 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 나쁘면 +1점, ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 나쁘면 +2점입니다.`,
+    '5. 부담 점수 변화는 다음 라운드 핸디에도 같이 반영됩니다.',
+    '6. 중도 종료 라운드는 부분 반영 또는 정산 제외 중 선택합니다.',
+    `7. 최종 식사비 ${formatWon(dinnerPrice.value)}는 부담 점수 비율로 나눕니다.`,
+    participantsWithCosts.value.length > 0 ? `현재 참가자: ${participantRuleText.value}` : '',
+  ].filter(Boolean).join('\n')
+})
 
 const copyRules = async () => {
   try {
@@ -219,7 +297,7 @@ const copyRules = async () => {
       <section class="rules-card" aria-labelledby="exampleRuleTitle">
         <div class="rules-card__header">
           <p>Example</p>
-          <h3 id="exampleRuleTitle">점수 변화 예시</h3>
+          <h3 id="exampleRuleTitle">{{ isRankFundMode ? '순위 적립 예시' : '점수 변화 예시' }}</h3>
         </div>
         <div class="example-list">
           <article

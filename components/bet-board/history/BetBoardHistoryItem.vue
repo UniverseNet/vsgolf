@@ -3,6 +3,7 @@ import type { ScoredRoundHistoryEntry } from '~/types/bet-board'
 import {
   ROUND_COMPLETION_STATUS_PARTIAL,
   ROUND_RULE_FIELD_AVERAGE,
+  SETTLEMENT_MODE_RANK_FUND,
   TOTAL_ROUND_HOLES,
 } from '~/utils/bet-board/constants'
 import { formatRoundCourseText, formatWon } from '~/utils/bet-board/format'
@@ -17,10 +18,11 @@ const emit = defineEmits<{
   delete: [round: number]
 }>()
 
-const { dinnerPrice, getHistoryScoreText, getHistoryAdjustmentText } = useBetBoardContext()
+const { dinnerPrice, getHistoryScoreText, getHistoryAdjustmentText, getHistoryFundText } = useBetBoardContext()
 
 const hasScores = computed(() => props.entry.scores.length > 0)
 const isFieldAverageRule = computed(() => props.entry.rule === ROUND_RULE_FIELD_AVERAGE)
+const isRankFundEntry = computed(() => props.entry.settlementMode === SETTLEMENT_MODE_RANK_FUND)
 const isPartialRound = computed(() => props.entry.completionStatus === ROUND_COMPLETION_STATUS_PARTIAL)
 const isSettlementExcluded = computed(() => props.entry.isSettlementExcluded)
 const holesText = computed(() => `${props.entry.holesPlayed || TOTAL_ROUND_HOLES}홀`)
@@ -41,6 +43,10 @@ const resultText = computed(() => {
   }
 
   if (hasScores.value && isFieldAverageRule.value) {
+    if (isRankFundEntry.value) {
+      return props.entry.isDraw ? '공동 순위 적립' : '순위 적립'
+    }
+
     if (isPartialRound.value) {
       return props.entry.isDraw ? `${holesText.value} 평균권` : `${holesText.value} 부분 반영`
     }
@@ -89,6 +95,10 @@ const stateText = computed(() => {
   }
 
   if (hasScores.value && isFieldAverageRule.value) {
+    if (isRankFundEntry.value) {
+      return getHistoryFundText(props.entry.scores)
+    }
+
     return getHistoryAdjustmentText(props.entry.scores)
   }
 
@@ -186,9 +196,11 @@ const scoreCostDeltaMap = computed(() => {
 
 const scoreRecordRows = computed(() =>
   props.entry.scores.map((score) => {
-    const costDelta = scoreCostDeltaMap.value.has(score.participantId)
+    const fundAmountDelta =
+      isRankFundEntry.value && typeof score.fundAmountDelta === 'number' ? score.fundAmountDelta : null
+    const costDelta = fundAmountDelta ?? (scoreCostDeltaMap.value.has(score.participantId)
       ? scoreCostDeltaMap.value.get(score.participantId) ?? null
-      : null
+      : null)
 
     return {
       id: score.participantId,
@@ -200,7 +212,11 @@ const scoreRecordRows = computed(() =>
         typeof score.adjustedStrokes === 'number' ? `${formatDecimal(score.adjustedStrokes)}타` : '-',
       differenceText: formatSignedDecimal(score.differenceFromAverage, '타'),
       shareChangeText:
-        typeof score.shareDelta === 'number'
+        isRankFundEntry.value
+          ? score.fundRank
+            ? `${score.fundRank}등`
+            : '-'
+          : typeof score.shareDelta === 'number'
           ? `${formatSignedDecimal(score.shareDelta, '점')} → ${score.shareAfter ?? '-'}점`
           : isSettlementExcluded.value
             ? '0점'
@@ -211,7 +227,10 @@ const scoreRecordRows = computed(() =>
           : isSettlementExcluded.value
             ? '0'
             : '-',
-      costChangeText: formatSignedWon(costDelta),
+      costChangeText:
+        isRankFundEntry.value && fundAmountDelta !== null
+          ? `${formatSignedWon(fundAmountDelta)} → ${formatWon(score.fundAmountAfter ?? 0)}`
+          : formatSignedWon(costDelta),
       shareDelta: score.shareDelta ?? 0,
       costDelta: costDelta ?? 0,
     }
@@ -221,7 +240,7 @@ const scoreRecordRows = computed(() =>
 const recordMetaItems = computed(() => {
   const items = [
     holesText.value,
-    isFieldAverageRule.value ? '평균 기준' : '최저/최고타',
+    isRankFundEntry.value ? '순위 적립' : isFieldAverageRule.value ? '평균 기준' : '최저/최고타',
     isSettlementExcluded.value ? '정산 제외' : '정산 반영',
   ]
 
@@ -296,7 +315,7 @@ const toggleExpanded = () => {
               <th scope="col">핸디</th>
               <th scope="col">보정</th>
               <th scope="col">평균차</th>
-              <th scope="col">부담</th>
+              <th scope="col">{{ isRankFundEntry ? '순위' : '부담' }}</th>
               <th scope="col">핸디 변화</th>
               <th scope="col">금액 변화</th>
             </tr>

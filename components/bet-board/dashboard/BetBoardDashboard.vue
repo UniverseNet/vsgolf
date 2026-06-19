@@ -1,14 +1,17 @@
 <script setup lang="ts">
-const { matchState, lowestBurdenParticipant, leadingParticipant, leaderText, lowestBurdenText } =
+const { matchState, isRankFundMode, lowestBurdenParticipant, leadingParticipant, leaderText, lowestBurdenText, formatWon } =
   useBetBoardContext()
 </script>
 
 <template>
   <section class="dashboard" aria-label="현재 내기 상태">
     <article class="metric">
-      <span class="metric__label">최소 부담</span>
+      <span class="metric__label">{{ isRankFundMode ? '최소 적립' : '최소 부담' }}</span>
       <strong class="metric__value">
-        {{ lowestBurdenParticipant ? `${lowestBurdenParticipant.share}점` : '-' }}
+        <template v-if="lowestBurdenParticipant">
+          {{ isRankFundMode ? formatWon(lowestBurdenParticipant.cost) : `${lowestBurdenParticipant.share}점` }}
+        </template>
+        <template v-else>-</template>
       </strong>
       <span class="metric__sub-value">
         {{ lowestBurdenParticipant ? `${lowestBurdenText} · ${lowestBurdenParticipant.percent.toFixed(1)}%` : '참가자 없음' }}
@@ -18,7 +21,10 @@ const { matchState, lowestBurdenParticipant, leadingParticipant, leaderText, low
     <article class="metric">
       <span class="metric__label">최다 부담</span>
       <strong class="metric__value">
-        {{ leadingParticipant ? `${leadingParticipant.share}점` : '-' }}
+        <template v-if="leadingParticipant">
+          {{ isRankFundMode ? formatWon(leadingParticipant.cost) : `${leadingParticipant.share}점` }}
+        </template>
+        <template v-else>-</template>
       </strong>
       <span class="metric__sub-value">{{ leaderText }}</span>
     </article>

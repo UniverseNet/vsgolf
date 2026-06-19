@@ -1,4 +1,5 @@
 import type {
+  FundRule,
   MatchState,
   PartialRoundPolicy,
   Participant,
@@ -25,14 +26,18 @@ import {
   ROUND_COMPLETION_STATUS_PARTIAL,
   ROUND_RULE_FIELD_AVERAGE,
   ROUND_RULE_STROKE_EXTREMES,
+  SETTLEMENT_MODE_RANK_FUND,
+  SETTLEMENT_MODE_SHARE_RATIO,
   TOTAL_ROUND_HOLES,
 } from './constants'
 import { formatWon } from './format'
 import {
   clamp,
   normalizeHolesPlayed,
+  normalizeFundRule,
   normalizePartialRoundPolicy,
   normalizeRoundCompletionStatus,
+  normalizeSettlementMode,
   normalizeStroke,
 } from './normalize'
 
@@ -43,6 +48,8 @@ interface RoundCalculationOptions {
   holesPlayed?: number | null
   completionStatus?: RoundCompletionStatus
   partialRoundPolicy?: PartialRoundPolicy
+  settlementMode?: unknown
+  fundRule?: unknown
 }
 
 export const getStrokeRoundOutcome = (scores: ScoreEntry[]) => {
@@ -191,6 +198,56 @@ const getFieldAverageRoundDetails = (
 const getRoundRule = (rule?: RoundRule) =>
   rule === ROUND_RULE_FIELD_AVERAGE ? ROUND_RULE_FIELD_AVERAGE : ROUND_RULE_STROKE_EXTREMES
 
+const getScoreRankValue = (score: RoundScoreDetail) => score.adjustedStrokes ?? score.strokes
+
+const getFundRoundDetails = (details: RoundScoreDetail[], fundRule: FundRule): RoundScoreDetail[] => {
+  if (details.length === 0) {
+    return []
+  }
+
+  const sortedDetails = [...details].sort((leftScore, rightScore) => {
+    const rankDifference = getScoreRankValue(leftScore) - getScoreRankValue(rightScore)
+
+    if (rankDifference !== 0) {
+      return rankDifference
+    }
+
+    return leftScore.participantName.localeCompare(rightScore.participantName, 'ko')
+  })
+  const fundDetails = new Map<string, Pick<RoundScoreDetail, 'fundRank' | 'fundAmountDelta'>>()
+  let rankIndex = 0
+
+  while (rankIndex < sortedDetails.length) {
+    const rankValue = getScoreRankValue(sortedDetails[rankIndex])
+    const sameRankScores = sortedDetails.slice(rankIndex).filter((score) => getScoreRankValue(score) === rankValue)
+    const nextRankIndex = rankIndex + sameRankScores.length
+    const rankAmountTotal = fundRule.rankAllocations
+      .slice(rankIndex, nextRankIndex)
+      .reduce((total, amount) => total + amount, 0)
+    let allocatedAmount = 0
+
+    sameRankScores.forEach((score, index) => {
+      const isLastSameRankScore = index === sameRankScores.length - 1
+      const fundAmountDelta = isLastSameRankScore
+        ? Math.max(0, rankAmountTotal - allocatedAmount)
+        : Math.max(0, Math.round(rankAmountTotal / sameRankScores.length))
+
+      allocatedAmount += fundAmountDelta
+      fundDetails.set(score.participantId, {
+        fundRank: rankIndex + 1,
+        fundAmountDelta,
+      })
+    })
+
+    rankIndex = nextRankIndex
+  }
+
+  return details.map((score) => ({
+    ...score,
+    ...fundDetails.get(score.participantId),
+  }))
+}
+
 const getRoundCompletion = (entry: RoundCalculationOptions) => {
   const holesPlayed = normalizeHolesPlayed(entry.holesPlayed)
   const completionStatus = normalizeRoundCompletionStatus(entry.completionStatus, holesPlayed)
@@ -211,11 +268,19 @@ const getRoundCompletion = (entry: RoundCalculationOptions) => {
 
 const getSettlementApplied = (isSettlementExcluded: boolean) => !isSettlementExcluded
 
-export const buildMatchState = (board: { participants: Participant[]; history: RoundEntry[] }): MatchState => {
+export const buildMatchState = (board: {
+  participants: Participant[]
+  history: RoundEntry[]
+  settlementMode?: unknown
+  fundRule?: unknown
+}): MatchState => {
+  const settlementMode = normalizeSettlementMode(board.settlementMode)
+  const fundRule = normalizeFundRule(board.fundRule, board.participants.length)
   const participantStates = board.participants.map((participant, index) => ({
     ...participant,
     colorIndex: index,
     share: DEFAULT_PARTICIPANT_SHARE,
+    fundAmount: 0,
     handicap: participant.initialHandicap,
     wins: 0,
     losses: 0,
@@ -243,6 +308,7 @@ export const buildMatchState = (board: { participants: Participant[]; history: R
       : []
     const isScoredRound = scores.length > 0
     const roundRule = getRoundRule(entry.rule)
+    const roundFundRule = normalizeFundRule(entry.fundRule ?? fundRule, scores.length || board.participants.length)
     const courseName = entry.courseName?.trim()
     const roundCompletion = getRoundCompletion(entry)
 
@@ -251,6 +317,7 @@ export const buildMatchState = (board: { participants: Participant[]; history: R
         round: history.length + 1,
         isDraw: true,
         rule: roundRule,
+        settlementMode,
         ...(courseName ? { courseName } : {}),
         holesPlayed: roundCompletion.holesPlayed,
         completionStatus: roundCompletion.completionStatus,
@@ -259,6 +326,7 @@ export const buildMatchState = (board: { participants: Participant[]; history: R
           : {}),
         isSettlementExcluded: true,
         isSettlementApplied: false,
+        ...(settlementMode === SETTLEMENT_MODE_RANK_FUND ? { fundRoundAmount: roundFundRule.roundAmount } : {}),
         loserId: '',
         loserName: '',
         loserShare: 0,
@@ -274,19 +342,53 @@ export const buildMatchState = (board: { participants: Participant[]; history: R
 
     if (isScoredRound && roundRule === ROUND_RULE_FIELD_AVERAGE) {
       const averageRound = getFieldAverageRoundDetails(participantStates, scores, roundCompletion)
-      const scoreDetails = averageRound.details.map((score) => {
+      const roundDetails =
+        settlementMode === SETTLEMENT_MODE_RANK_FUND
+          ? getFundRoundDetails(averageRound.details, roundFundRule)
+          : averageRound.details
+      const highestFundAmountDelta = Math.max(0, ...roundDetails.map((score) => score.fundAmountDelta ?? 0))
+      const isFundDraw =
+        settlementMode === SETTLEMENT_MODE_RANK_FUND &&
+        new Set(roundDetails.map((score) => getScoreRankValue(score))).size <= 1
+      const scoreDetails = roundDetails.map((score) => {
         const participant = participantStateMap.get(score.participantId)
 
         if (!participant) {
           return score
         }
 
-        const requestedShareDelta = score.shareDelta ?? 0
         const requestedHandicapDelta = score.handicapDelta ?? 0
-        const shareAfter = Math.max(0, participant.share + requestedShareDelta)
         const handicapAfter = Math.max(HANDICAP_MIN, participant.handicap + requestedHandicapDelta)
-        const shareDelta = shareAfter - participant.share
         const handicapDelta = handicapAfter - participant.handicap
+
+        if (settlementMode === SETTLEMENT_MODE_RANK_FUND) {
+          const fundAmountDelta = score.fundAmountDelta ?? 0
+
+          participant.fundAmount += fundAmountDelta
+          participant.handicap = handicapAfter
+
+          if (!isFundDraw && score.fundRank === 1) {
+            participant.wins += 1
+          }
+
+          if (!isFundDraw && fundAmountDelta > 0 && fundAmountDelta === highestFundAmountDelta) {
+            participant.losses += 1
+          }
+
+          return {
+            ...score,
+            shareDelta: 0,
+            shareAfter: participant.share,
+            fundAmountDelta,
+            fundAmountAfter: participant.fundAmount,
+            handicapDelta,
+            handicapAfter,
+          }
+        }
+
+        const requestedShareDelta = score.shareDelta ?? 0
+        const shareAfter = Math.max(0, participant.share + requestedShareDelta)
+        const shareDelta = shareAfter - participant.share
 
         participant.share = shareAfter
         participant.handicap = handicapAfter
@@ -312,8 +414,12 @@ export const buildMatchState = (board: { participants: Participant[]; history: R
 
       history.push({
         round: history.length + 1,
-        isDraw: scoreDetails.every((score) => (score.shareDelta ?? 0) === 0),
+        isDraw:
+          settlementMode === SETTLEMENT_MODE_RANK_FUND
+            ? isFundDraw
+            : scoreDetails.every((score) => (score.shareDelta ?? 0) === 0),
         rule: ROUND_RULE_FIELD_AVERAGE,
+        settlementMode,
         ...(courseName ? { courseName } : {}),
         holesPlayed: roundCompletion.holesPlayed,
         completionStatus: roundCompletion.completionStatus,
@@ -322,6 +428,7 @@ export const buildMatchState = (board: { participants: Participant[]; history: R
           : {}),
         isSettlementExcluded: false,
         isSettlementApplied: true,
+        ...(settlementMode === SETTLEMENT_MODE_RANK_FUND ? { fundRoundAmount: roundFundRule.roundAmount } : {}),
         averageAdjustedStrokes: averageRound.averageAdjustedStrokes,
         loserId: loser?.id ?? '',
         loserName: loser?.name ?? '',
@@ -357,12 +464,14 @@ export const buildMatchState = (board: { participants: Participant[]; history: R
       round: history.length + 1,
       isDraw,
       rule: ROUND_RULE_STROKE_EXTREMES,
+      settlementMode,
       ...(courseName ? { courseName } : {}),
       holesPlayed: roundCompletion.holesPlayed,
       completionStatus: roundCompletion.completionStatus,
       ...(roundCompletion.partialRoundPolicy ? { partialRoundPolicy: roundCompletion.partialRoundPolicy } : {}),
       isSettlementExcluded: false,
       isSettlementApplied: getSettlementApplied(false),
+      ...(settlementMode === SETTLEMENT_MODE_RANK_FUND ? { fundRoundAmount: roundFundRule.roundAmount } : {}),
       loserId: loser?.id ?? '',
       loserName: loser?.name ?? '',
       loserShare: loser?.share ?? 0,
@@ -376,6 +485,7 @@ export const buildMatchState = (board: { participants: Participant[]; history: R
   })
 
   const totalShare = participantStates.reduce((total, participant) => total + participant.share, 0)
+  const totalFundAmount = participantStates.reduce((total, participant) => total + participant.fundAmount, 0)
   const settlementRoundCount = history.filter((entry) => entry.isSettlementApplied).length
   const partialRoundCount = history.filter(
     (entry) => entry.completionStatus === ROUND_COMPLETION_STATUS_PARTIAL,
@@ -385,7 +495,10 @@ export const buildMatchState = (board: { participants: Participant[]; history: R
   return {
     participants: participantStates,
     history,
+    settlementMode,
+    fundRule,
     totalShare,
+    totalFundAmount,
     recordedRoundCount: history.length,
     settlementRoundCount,
     partialRoundCount,
@@ -397,6 +510,18 @@ export const getParticipantsWithCosts = (
   matchState: MatchState,
   dinnerPrice: number,
 ): ParticipantWithCost[] => {
+  if (matchState.settlementMode === SETTLEMENT_MODE_RANK_FUND) {
+    const totalFundAmount = matchState.totalFundAmount || 0
+    const targetAmount = Math.max(1, dinnerPrice)
+
+    return matchState.participants.map((participant) => ({
+      ...participant,
+      cost: participant.fundAmount,
+      percent: totalFundAmount > 0 ? (participant.fundAmount / totalFundAmount) * 100 : 0,
+      targetPercent: (participant.fundAmount / targetAmount) * 100,
+    }))
+  }
+
   const totalShare = matchState.totalShare || 1
   let allocatedCost = 0
 
@@ -412,6 +537,7 @@ export const getParticipantsWithCosts = (
       ...participant,
       cost,
       percent: (participant.share / totalShare) * 100,
+      targetPercent: dinnerPrice > 0 ? (cost / dinnerPrice) * 100 : 0,
     }
   })
 }
@@ -496,6 +622,7 @@ export const getRoundScoreSummary = (
       isComplete: true,
       isDraw: true,
       rule: ROUND_RULE_FIELD_AVERAGE,
+      settlementMode: normalizeSettlementMode(options.settlementMode),
       holesPlayed,
       completionStatus: ROUND_COMPLETION_STATUS_PARTIAL,
       partialRoundPolicy,
@@ -507,11 +634,28 @@ export const getRoundScoreSummary = (
     }
   }
 
+  const settlementMode = normalizeSettlementMode(options.settlementMode)
+  const fundRule = normalizeFundRule(options.fundRule, participants.length)
   const averageRound = getFieldAverageRoundDetails(participants, completedScores, {
     holesPlayed,
     completionStatus: isPartialRound ? ROUND_COMPLETION_STATUS_PARTIAL : ROUND_COMPLETION_STATUS_COMPLETED,
     partialRoundPolicy,
   })
+  const fundDetails =
+    settlementMode === SETTLEMENT_MODE_RANK_FUND
+      ? getFundRoundDetails(averageRound.details, fundRule)
+      : averageRound.details
+  const isFundDraw =
+    settlementMode === SETTLEMENT_MODE_RANK_FUND &&
+    new Set(fundDetails.map((score) => getScoreRankValue(score))).size <= 1
+  const fundAdjustmentText = fundDetails
+    .filter((score) => typeof score.fundRank === 'number')
+    .sort((leftScore, rightScore) => (leftScore.fundRank ?? 0) - (rightScore.fundRank ?? 0))
+    .map(
+      (score) =>
+        `${score.fundRank}등 ${score.participantName} ${formatWon(score.fundAmountDelta ?? 0)}`,
+    )
+    .join(' · ')
   const changedScores = averageRound.details.filter((score) => (score.shareDelta ?? 0) !== 0)
   const completionText = isPartialRound ? `${holesPlayed}홀 부분 반영 · ` : ''
   const averageText = `${completionText}평균 보정 ${formatStrokeValue(averageRound.averageAdjustedStrokes)}타`
@@ -519,11 +663,33 @@ export const getRoundScoreSummary = (
     .map((score) => `${score.participantName} ${formatPointDelta(score.shareDelta ?? 0)}점`)
     .join(' · ')
 
+  if (settlementMode === SETTLEMENT_MODE_RANK_FUND) {
+    return {
+      isComplete: true,
+      isDraw: isFundDraw,
+      rule: ROUND_RULE_FIELD_AVERAGE,
+      settlementMode,
+      holesPlayed,
+      completionStatus: isPartialRound ? ROUND_COMPLETION_STATUS_PARTIAL : ROUND_COMPLETION_STATUS_COMPLETED,
+      ...(partialRoundPolicy ? { partialRoundPolicy } : {}),
+      isSettlementExcluded: false,
+      adjustments: fundDetails,
+      fundRoundAmount: fundRule.roundAmount,
+      fundRule,
+      averageAdjustedStrokes: averageRound.averageAdjustedStrokes,
+      loserId: averageRound.loserId,
+      message: `${averageText} · ${fundAdjustmentText || '적립 변화 없음'}`,
+      scores: completedScores,
+      winnerId: averageRound.winnerId,
+    }
+  }
+
   if (averageRound.isDraw) {
     return {
       isComplete: true,
       isDraw: true,
       rule: ROUND_RULE_FIELD_AVERAGE,
+      settlementMode,
       holesPlayed,
       completionStatus: isPartialRound ? ROUND_COMPLETION_STATUS_PARTIAL : ROUND_COMPLETION_STATUS_COMPLETED,
       ...(partialRoundPolicy ? { partialRoundPolicy } : {}),
@@ -541,6 +707,7 @@ export const getRoundScoreSummary = (
     isComplete: true,
     isDraw: false,
     rule: ROUND_RULE_FIELD_AVERAGE,
+    settlementMode,
     holesPlayed,
     completionStatus: isPartialRound ? ROUND_COMPLETION_STATUS_PARTIAL : ROUND_COMPLETION_STATUS_COMPLETED,
     ...(partialRoundPolicy ? { partialRoundPolicy } : {}),
@@ -560,6 +727,8 @@ export const buildSettlementSummary = ({
   roundCount,
   settlementRoundCount,
   excludedRoundCount = 0,
+  settlementMode = SETTLEMENT_MODE_SHARE_RATIO,
+  totalFundAmount = 0,
   session,
 }: {
   participants: ParticipantWithCost[]
@@ -567,12 +736,21 @@ export const buildSettlementSummary = ({
   roundCount: number
   settlementRoundCount?: number
   excludedRoundCount?: number
+  settlementMode?: unknown
+  totalFundAmount?: number
   session: Session
 }) => {
   const settlementRoundText =
     typeof settlementRoundCount === 'number'
       ? `정산 반영 ${settlementRoundCount}라운드${excludedRoundCount > 0 ? `, 제외 ${excludedRoundCount}라운드` : ''}`
       : `${roundCount}라운드`
+  const normalizedSettlementMode = normalizeSettlementMode(settlementMode)
+
+  if (normalizedSettlementMode === SETTLEMENT_MODE_RANK_FUND) {
+    return `적립내기 결과: ${session.title} / 참가자 ${participants.length}명 / 기록 ${roundCount}라운드 / ${settlementRoundText} / 목표 ${formatWon(
+      dinnerPrice,
+    )} / 현재 적립 ${formatWon(totalFundAmount)} / ${participants.map((participant) => `${participant.name} ${formatWon(participant.cost)}`).join(', ')}`
+  }
 
   return `저녁내기 결과: ${session.title} / 참가자 ${participants.length}명 / 기록 ${roundCount}라운드 / ${settlementRoundText} / ${formatWon(
     dinnerPrice,

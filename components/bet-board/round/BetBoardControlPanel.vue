@@ -10,6 +10,8 @@ const route = useRoute()
 const {
   activeMatch,
   matchState,
+  isRankFundMode,
+  fundRule,
   participantsWithCosts,
   roundPreviewText,
   applyRoundResult,
@@ -21,6 +23,7 @@ const {
   partialRoundPolicy,
   getScoreInput,
   setScoreInput,
+  formatWon,
   MIN_PARTICIPANTS,
 } = useBetBoardContext()
 
@@ -33,8 +36,15 @@ const roundGuideTitle = computed(() =>
 )
 const roundGuideDescription = computed(() =>
   hasRequiredParticipants.value
-    ? '라운드가 끝날 때 참가자별 실제 타수를 입력하세요. 중도 종료 라운드는 진행 홀 수 기준으로 부분 반영하거나 정산에서 제외할 수 있습니다.'
+    ? isRankFundMode.value
+      ? '라운드가 끝날 때 실제 타수를 입력하면 보정 타수 순위별로 라운드 적립금이 누적됩니다. 중도 종료 라운드는 부분 반영하거나 정산에서 제외할 수 있습니다.'
+      : '라운드가 끝날 때 참가자별 실제 타수를 입력하세요. 중도 종료 라운드는 진행 홀 수 기준으로 부분 반영하거나 정산에서 제외할 수 있습니다.'
     : `최소 ${MIN_PARTICIPANTS}명을 추가해야 라운드 결과 입력이 가능합니다.`,
+)
+const scoreInputRuleText = computed(() =>
+  isRankFundMode.value
+    ? `보정 타수 순위별 ${formatWon(fundRule.value.roundAmount)} 적립`
+    : '18홀 기준 평균 대비 3타 ±1 · 6타 ±2',
 )
 const partialRoundPolicyOptions: Array<{
   value: PartialRoundPolicy
@@ -134,7 +144,7 @@ const onScoreInput = (participantId: string, event: Event) => {
     <div class="score-entry-panel" aria-labelledby="scoreInputTitle">
       <div class="score-entry-panel__header">
         <strong id="scoreInputTitle">타수 입력</strong>
-        <span>18홀 기준 평균 대비 3타 ±1 · 6타 ±2</span>
+        <span>{{ scoreInputRuleText }}</span>
       </div>
       <div class="score-input-list" aria-labelledby="scoreInputTitle">
         <p v-if="participantsWithCosts.length === 0" class="score-input-empty">
@@ -146,7 +156,14 @@ const onScoreInput = (participantId: string, event: Event) => {
           class="score-input-item"
         >
           <strong>{{ participant.name }}</strong>
-          <span>{{ participant.share }}점 · 핸디 +{{ participant.handicap }}</span>
+          <span>
+            <template v-if="isRankFundMode">
+              적립 {{ formatWon(participant.fundAmount) }} · 핸디 +{{ participant.handicap }}
+            </template>
+            <template v-else>
+              {{ participant.share }}점 · 핸디 +{{ participant.handicap }}
+            </template>
+          </span>
           <input
             type="number"
             min="1"

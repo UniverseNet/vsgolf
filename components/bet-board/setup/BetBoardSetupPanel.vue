@@ -1,18 +1,36 @@
 <script setup lang="ts">
+import type { SettlementMode } from '~/types/bet-board'
+import {
+  SETTLEMENT_MODE_RANK_FUND,
+  SETTLEMENT_MODE_SHARE_RATIO,
+} from '~/utils/bet-board/constants'
+
 const {
   activeMatch,
   pendingDeleteParticipantId,
   myParticipantId,
   newParticipantName,
   newParticipantHandicap,
+  dinnerPriceDisplay,
   matchState,
+  settlementMode,
+  isRankFundMode,
+  fundRule,
+  fundRankAllocationTotal,
+  canEditSettlementRule,
   participantsWithCosts,
   averageInitialHandicap,
   addParticipant,
   deleteParticipant,
   setMyParticipant,
+  setSettlementMode,
   updateSessionTitle,
   updateSessionDate,
+  updateDinnerPrice,
+  updateFundRoundAmount,
+  updateFundRankAllocation,
+  resetFundRankAllocations,
+  formatWon,
   MIN_PARTICIPANTS,
 } = useBetBoardContext()
 
@@ -22,6 +40,34 @@ const participantGuideText = computed(() =>
     ? `라운드 입력을 시작하려면 참가자 ${MIN_PARTICIPANTS}명 이상이 필요합니다.`
     : '라운드 입력을 시작할 수 있습니다.',
 )
+const settlementModeOptions: Array<{
+  value: SettlementMode
+  title: string
+  description: string
+}> = [
+  {
+    value: SETTLEMENT_MODE_SHARE_RATIO,
+    title: '부담 비율',
+    description: '라운드마다 부담 점수를 조정하고 최종 금액을 비율로 나눕니다.',
+  },
+  {
+    value: SETTLEMENT_MODE_RANK_FUND,
+    title: '순위 적립',
+    description: '목표 금액까지 매 라운드 순위별 금액을 누적합니다.',
+  },
+]
+
+const settlementRuleLockText = computed(() =>
+  canEditSettlementRule.value ? '첫 라운드 저장 전까지 변경 가능' : '라운드 기록 후 변경 불가',
+)
+
+const onFundRoundAmountChange = (event: Event) => {
+  updateFundRoundAmount((event.target as HTMLInputElement).value)
+}
+
+const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
+  updateFundRankAllocation(rankIndex, (event.target as HTMLInputElement).value)
+}
 </script>
 
 <template>
@@ -57,6 +103,101 @@ const participantGuideText = computed(() =>
           @change="updateSessionDate"
         />
       </label>
+    </div>
+
+    <div class="settlement-rule">
+      <div class="settlement-rule__header">
+        <strong>정산 방식</strong>
+        <span>{{ settlementRuleLockText }}</span>
+      </div>
+
+      <div class="settlement-mode-options" role="radiogroup" aria-label="정산 방식 선택">
+        <label
+          v-for="option in settlementModeOptions"
+          :key="option.value"
+          class="settlement-mode-option"
+          :class="{ 'settlement-mode-option--active': settlementMode === option.value }"
+        >
+          <input
+            type="radio"
+            name="settlementMode"
+            :value="option.value"
+            :checked="settlementMode === option.value"
+            :disabled="!canEditSettlementRule"
+            @change="setSettlementMode(option.value)"
+          />
+          <strong>{{ option.title }}</strong>
+          <small>{{ option.description }}</small>
+        </label>
+      </div>
+
+      <div v-if="isRankFundMode" class="fund-rule">
+        <div class="setup-grid setup-grid--fund">
+          <label class="setup-field" for="fundTargetAmountInput">
+            <span>목표 적립금</span>
+            <input
+              id="fundTargetAmountInput"
+              v-model="dinnerPriceDisplay"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              :disabled="!canEditSettlementRule"
+              @input="updateDinnerPrice"
+            />
+          </label>
+
+          <label class="setup-field" for="fundRoundAmountInput">
+            <span>라운드 적립금</span>
+            <input
+              id="fundRoundAmountInput"
+              :value="fundRule.roundAmount"
+              type="number"
+              min="0"
+              step="1000"
+              inputmode="numeric"
+              :disabled="!canEditSettlementRule"
+              @change="onFundRoundAmountChange"
+            />
+          </label>
+        </div>
+
+        <div class="fund-rank-list" aria-label="순위별 적립금">
+          <div class="fund-rank-list__header">
+            <span>순위별 배분</span>
+            <strong>{{ formatWon(fundRankAllocationTotal) }}</strong>
+          </div>
+
+          <p v-if="participantCount === 0" class="fund-rank-list__empty">
+            참가자를 추가하면 순위별 적립금 입력 칸이 표시됩니다.
+          </p>
+
+          <label
+            v-for="(rankAmount, rankIndex) in fundRule.rankAllocations"
+            :key="rankIndex"
+            class="fund-rank-field"
+          >
+            <span>{{ rankIndex + 1 }}등</span>
+            <input
+              :value="rankAmount"
+              type="number"
+              min="0"
+              step="1000"
+              inputmode="numeric"
+              :disabled="!canEditSettlementRule"
+              @change="onFundRankAllocationChange(rankIndex, $event)"
+            />
+          </label>
+
+          <button
+            class="fund-rank-list__reset"
+            type="button"
+            :disabled="!canEditSettlementRule || participantCount === 0"
+            @click="resetFundRankAllocations"
+          >
+            기본 배분
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="setup-grid setup-grid--participant">
@@ -152,6 +293,10 @@ const participantGuideText = computed(() =>
     grid-template-columns: 1fr auto auto;
     align-items: end;
   }
+
+  &--fund {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .setup-field {
@@ -174,6 +319,156 @@ const participantGuideText = computed(() =>
   &--primary {
     color: #fff;
     background: linear-gradient(135deg, var(--teal), var(--mint));
+  }
+}
+
+.settlement-rule {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(34, 58, 50, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.settlement-rule__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  strong {
+    color: var(--text);
+    font-size: 0.94rem;
+    font-weight: 900;
+  }
+
+  span {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+}
+
+.settlement-mode-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settlement-mode-option {
+  display: grid;
+  gap: 5px;
+  min-height: 92px;
+  padding: 13px;
+  border: 1px solid rgba(34, 58, 50, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms var(--ease-out);
+
+  input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  strong {
+    color: var(--text);
+    font-size: 0.94rem;
+    font-weight: 900;
+  }
+
+  small {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  &:has(input:focus-visible) {
+    box-shadow: 0 0 0 4px rgba(56, 201, 141, 0.18);
+  }
+
+  &:has(input:disabled) {
+    cursor: not-allowed;
+    opacity: 0.72;
+  }
+
+  &--active {
+    border-color: rgba(7, 137, 135, 0.3);
+    background: linear-gradient(135deg, var(--teal-soft), rgba(255, 255, 255, 0.78));
+  }
+}
+
+.fund-rule {
+  display: grid;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.fund-rank-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 8px;
+}
+
+.fund-rank-list__header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+
+  strong {
+    color: var(--text);
+    font-size: 0.9rem;
+  }
+}
+
+.fund-rank-list__empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.fund-rank-field {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+
+  input {
+    @include form-input;
+    min-height: 40px;
+  }
+}
+
+.fund-rank-list__reset {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(34, 58, 50, 0.14);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.78);
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
   }
 }
 
@@ -207,8 +502,15 @@ const participantGuideText = computed(() =>
 
 @media (max-width: 720px) {
   .setup-grid--session,
-  .setup-grid--participant {
+  .setup-grid--participant,
+  .setup-grid--fund,
+  .settlement-mode-options {
     grid-template-columns: 1fr;
+  }
+
+  .settlement-rule__header {
+    align-items: start;
+    flex-direction: column;
   }
 }
 

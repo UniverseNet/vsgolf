@@ -1,12 +1,15 @@
 import type {
   AppState,
+  FundRule,
   Match,
   PartialRoundPolicy,
   ParticipantWithCost,
   ScoredRoundHistoryEntry,
   RoundCompletionStatus,
+  SettlementMode,
 } from '~/types/bet-board'
 import {
+  DEFAULT_FUND_ROUND_AMOUNT,
   DEFAULT_DINNER_PRICE,
   DEFAULT_INITIAL_HANDICAP,
   DEFAULT_PARTICIPANT_SHARE,
@@ -16,6 +19,8 @@ import {
   ROUND_COMPLETION_STATUS_COMPLETED,
   ROUND_COMPLETION_STATUS_PARTIAL,
   ROUND_RULE_FIELD_AVERAGE,
+  SETTLEMENT_MODE_RANK_FUND,
+  SETTLEMENT_MODE_SHARE_RATIO,
   STORAGE_KEY,
   TOTAL_ROUND_HOLES,
 } from '~/utils/bet-board/constants'
@@ -23,7 +28,9 @@ import {
   formatDateText,
   formatPriceInput,
   formatWon,
+  getFundRankAllocationText,
   getHistoryAdjustmentText,
+  getHistoryFundText,
   getHistoryScoreText,
   getLeaderText,
   getLeadingParticipant,
@@ -43,13 +50,17 @@ import {
 } from '~/utils/bet-board/match'
 import {
   createDefaultMatch,
+  createDefaultFundRankAllocations,
   createParticipant,
   getTodayDateValue,
   loadStoredAppState,
   normalizeCourseName,
   normalizeDinnerPrice,
+  normalizeFundAmount,
+  normalizeFundRule,
   normalizeParticipantName,
   normalizeRoundHistory,
+  normalizeSettlementMode,
   normalizeSessionTitle,
   serializeAppState,
 } from '~/utils/bet-board/normalize'
@@ -64,6 +75,7 @@ import {
 interface ParticipantRoundChange {
   round: number
   label: string
+  rank?: number
   strokes?: number
   adjustedStrokes?: number
   shareDelta: number
@@ -167,8 +179,20 @@ export const useBetBoard = () => {
     buildMatchState({
       participants: activeMatch.value?.participants ?? [],
       history: activeMatch.value?.history ?? [],
+      settlementMode: activeMatch.value?.settlementMode,
+      fundRule: activeMatch.value?.fundRule,
     }),
   )
+
+  const settlementMode = computed<SettlementMode>(() => matchState.value.settlementMode)
+  const isRankFundMode = computed(() => settlementMode.value === SETTLEMENT_MODE_RANK_FUND)
+  const fundRule = computed<FundRule>(() => matchState.value.fundRule)
+  const fundRankAllocationTotal = computed(() =>
+    fundRule.value.rankAllocations.reduce((total, amount) => total + amount, 0),
+  )
+  const canEditSettlementRule = computed(() => matchState.value.recordedRoundCount === 0)
+  const settlementModeText = computed(() => (isRankFundMode.value ? '순위 적립 방식' : '부담 비율 방식'))
+  const fundRankAllocationText = computed(() => getFundRankAllocationText(fundRule.value.rankAllocations))
 
   const participantsWithCosts = computed(() => getParticipantsWithCosts(matchState.value, dinnerPrice.value))
   const myParticipantId = computed(() => {
@@ -189,11 +213,61 @@ export const useBetBoard = () => {
   const myParticipant = computed(
     () => participantsWithCosts.value.find((participant) => participant.id === myParticipantId.value) ?? null,
   )
-  const leadingParticipant = computed(() => getLeadingParticipant(participantsWithCosts.value))
-  const lowestBurdenParticipant = computed(() => getLowestBurdenParticipant(participantsWithCosts.value))
+  const leadingParticipant = computed(() => {
+    if (!isRankFundMode.value) {
+      return getLeadingParticipant(participantsWithCosts.value)
+    }
+
+    return participantsWithCosts.value.reduce<ParticipantWithCost | null>(
+      (leadingParticipant, participant) =>
+        !leadingParticipant || participant.cost > leadingParticipant.cost ? participant : leadingParticipant,
+      null,
+    )
+  })
+  const lowestBurdenParticipant = computed(() => {
+    if (!isRankFundMode.value) {
+      return getLowestBurdenParticipant(participantsWithCosts.value)
+    }
+
+    return participantsWithCosts.value.reduce<ParticipantWithCost | null>(
+      (lowestParticipant, participant) =>
+        !lowestParticipant || participant.cost < lowestParticipant.cost ? participant : lowestParticipant,
+      null,
+    )
+  })
   const shareRatioText = computed(() => getShareRatioText(participantsWithCosts.value))
-  const leaderText = computed(() => getLeaderText(participantsWithCosts.value))
-  const lowestBurdenText = computed(() => getLowestBurdenText(participantsWithCosts.value))
+  const leaderText = computed(() => {
+    if (!isRankFundMode.value) {
+      return getLeaderText(participantsWithCosts.value)
+    }
+
+    if (participantsWithCosts.value.length === 0) {
+      return '참가자 없음'
+    }
+
+    const highestCost = Math.max(...participantsWithCosts.value.map((participant) => participant.cost))
+
+    return participantsWithCosts.value
+      .filter((participant) => participant.cost === highestCost)
+      .map((participant) => participant.name)
+      .join(', ')
+  })
+  const lowestBurdenText = computed(() => {
+    if (!isRankFundMode.value) {
+      return getLowestBurdenText(participantsWithCosts.value)
+    }
+
+    if (participantsWithCosts.value.length === 0) {
+      return '참가자 없음'
+    }
+
+    const lowestCost = Math.min(...participantsWithCosts.value.map((participant) => participant.cost))
+
+    return participantsWithCosts.value
+      .filter((participant) => participant.cost === lowestCost)
+      .map((participant) => participant.name)
+      .join(', ')
+  })
   const handicapMax = computed(() => getHandicapMax(participantsWithCosts.value))
 
   const averageInitialHandicap = computed(() => {
@@ -211,7 +285,11 @@ export const useBetBoard = () => {
     getRoundScoreSummary(
       matchState.value.participants,
       new Map(Object.entries(roundScoreInputs.value)),
-      roundCalculationOptions.value,
+      {
+        ...roundCalculationOptions.value,
+        settlementMode: settlementMode.value,
+        fundRule: fundRule.value,
+      },
     ).message,
   )
 
@@ -228,6 +306,8 @@ export const useBetBoard = () => {
       roundCount: matchState.value.recordedRoundCount,
       settlementRoundCount: matchState.value.settlementRoundCount,
       excludedRoundCount: matchState.value.excludedRoundCount,
+      settlementMode: settlementMode.value,
+      totalFundAmount: matchState.value.totalFundAmount,
       session: {
         id: match.id,
         title: match.title,
@@ -269,6 +349,19 @@ export const useBetBoard = () => {
       entry.completionStatus === ROUND_COMPLETION_STATUS_PARTIAL
         ? `${entry.holesPlayed}홀 부분 반영`
         : `${entry.round}R 반영`
+
+    if (score && entry.settlementMode === SETTLEMENT_MODE_RANK_FUND) {
+      return {
+        round: entry.round,
+        label,
+        rank: score.fundRank,
+        strokes: score.strokes,
+        adjustedStrokes: score.adjustedStrokes,
+        shareDelta: 0,
+        handicapDelta: score.handicapDelta ?? 0,
+        costDelta: score.fundAmountDelta ?? 0,
+      }
+    }
 
     if (score && hasDetailedShares) {
       const beforeShares = entry.scores.map((roundScore) => ({
@@ -334,11 +427,12 @@ export const useBetBoard = () => {
       share: DEFAULT_PARTICIPANT_SHARE,
     }))
     const latestSettlementRound = reversedHistory.value.find((entry) => entry.isSettlementApplied)
+    const initialCost = isRankFundMode.value ? 0 : getParticipantCostFromShares(participant.id, initialShares)
 
     return {
       participant,
-      initialCost: getParticipantCostFromShares(participant.id, initialShares),
-      costDelta: participant.cost - getParticipantCostFromShares(participant.id, initialShares),
+      initialCost,
+      costDelta: participant.cost - initialCost,
       shareDelta: participant.share - DEFAULT_PARTICIPANT_SHARE,
       handicapDelta: participant.handicap - participant.initialHandicap,
       latestChange: latestSettlementRound
@@ -508,6 +602,106 @@ export const useBetBoard = () => {
     persistState('내 기준 변경됨')
   }
 
+  const getEditableFundRule = (match: Match, participantCount = match.participants.length) =>
+    normalizeFundRule(match.fundRule, participantCount)
+
+  const getDefaultFundRuleForParticipantCount = (match: Match, participantCount = match.participants.length) => {
+    const currentFundRule = getEditableFundRule(match, participantCount)
+
+    return {
+      roundAmount: currentFundRule.roundAmount,
+      rankAllocations: createDefaultFundRankAllocations(currentFundRule.roundAmount, participantCount),
+    }
+  }
+
+  const guardEditableSettlementRule = () => {
+    if (canEditSettlementRule.value) {
+      return true
+    }
+
+    flashSaveStatus('라운드 기록 후 변경 불가')
+    return false
+  }
+
+  const setSettlementMode = (mode: SettlementMode) => {
+    if (!guardEditableSettlementRule()) {
+      return
+    }
+
+    const normalizedMode = normalizeSettlementMode(mode)
+
+    if (settlementMode.value === normalizedMode) {
+      return
+    }
+
+    pendingDeleteParticipantId.value = null
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
+      settlementMode: normalizedMode,
+      fundRule: normalizeFundRule(match.fundRule, match.participants.length),
+    }))
+    persistState(normalizedMode === SETTLEMENT_MODE_RANK_FUND ? '적립 방식 선택됨' : '비율 방식 선택됨')
+  }
+
+  const updateFundRoundAmount = (amount: unknown) => {
+    if (!guardEditableSettlementRule()) {
+      return
+    }
+
+    const nextRoundAmount = normalizeFundAmount(amount, DEFAULT_FUND_ROUND_AMOUNT)
+
+    pendingDeleteParticipantId.value = null
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
+      fundRule: {
+        roundAmount: nextRoundAmount,
+        rankAllocations: createDefaultFundRankAllocations(nextRoundAmount, match.participants.length),
+      },
+    }))
+    persistState('적립금 저장됨')
+  }
+
+  const updateFundRankAllocation = (rankIndex: number, amount: unknown) => {
+    if (!guardEditableSettlementRule()) {
+      return
+    }
+
+    pendingDeleteParticipantId.value = null
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => {
+      const currentFundRule = getEditableFundRule(match)
+      const rankAllocations = currentFundRule.rankAllocations.map((rankAmount, index) =>
+        index === rankIndex ? normalizeFundAmount(amount, rankAmount) : rankAmount,
+      )
+      const roundAmount = rankAllocations.reduce((total, rankAmount) => total + rankAmount, 0)
+
+      return {
+        ...match,
+        fundRule: {
+          roundAmount,
+          rankAllocations,
+        },
+      }
+    })
+    persistState('순위 배분 저장됨')
+  }
+
+  const resetFundRankAllocations = () => {
+    if (!guardEditableSettlementRule()) {
+      return
+    }
+
+    pendingDeleteParticipantId.value = null
+    pendingDeleteMatchId.value = null
+    updateActiveMatch((match) => ({
+      ...match,
+      fundRule: getDefaultFundRuleForParticipantCount(match),
+    }))
+    persistState('기본 배분 적용됨')
+  }
+
   onMounted(() => {
     syncDinnerPriceFromActiveMatch()
     void initializeRemoteStore()
@@ -529,11 +723,13 @@ export const useBetBoard = () => {
       const hasMyParticipant =
         typeof match.myParticipantId === 'string' &&
         match.participants.some((participant) => participant.id === match.myParticipantId)
+      const nextParticipants = [...match.participants, nextParticipant]
 
       return {
         ...match,
         myParticipantId: hasMyParticipant ? match.myParticipantId : nextParticipant.id,
-        participants: [...match.participants, nextParticipant],
+        participants: nextParticipants,
+        fundRule: getDefaultFundRuleForParticipantCount(match, nextParticipants.length),
       }
     })
 
@@ -575,6 +771,7 @@ export const useBetBoard = () => {
             }
           : { myParticipantId: undefined }),
         participants: nextParticipants,
+        fundRule: getDefaultFundRuleForParticipantCount(match, nextParticipants.length),
         history: normalizeRoundHistory(filteredHistory, nextParticipants),
       }
     })
@@ -588,7 +785,11 @@ export const useBetBoard = () => {
     const summary = getRoundScoreSummary(
       matchState.value.participants,
       new Map(Object.entries(roundScoreInputs.value)),
-      roundCalculationOptions.value,
+      {
+        ...roundCalculationOptions.value,
+        settlementMode: settlementMode.value,
+        fundRule: fundRule.value,
+      },
     )
 
     pendingDeleteParticipantId.value = null
@@ -615,6 +816,7 @@ export const useBetBoard = () => {
           holesPlayed: summary.holesPlayed ?? TOTAL_ROUND_HOLES,
           completionStatus: summary.completionStatus ?? ROUND_COMPLETION_STATUS_COMPLETED,
           ...(summary.partialRoundPolicy ? { partialRoundPolicy: summary.partialRoundPolicy } : {}),
+          ...(summary.fundRule ? { fundRule: summary.fundRule } : {}),
           ...(courseName ? { courseName } : {}),
         },
       ],
@@ -628,7 +830,9 @@ export const useBetBoard = () => {
           ? '부분 반영 저장됨'
           : summary.isDraw
             ? '평균권 라운드 저장됨'
-            : '평균 룰 저장됨',
+            : isRankFundMode.value
+              ? '적립 룰 저장됨'
+              : '평균 룰 저장됨',
     )
     playRoundFeedback()
   }
@@ -650,6 +854,10 @@ export const useBetBoard = () => {
       ...match,
       history: [],
       dinnerPrice: DEFAULT_DINNER_PRICE,
+      fundRule: {
+        roundAmount: DEFAULT_FUND_ROUND_AMOUNT,
+        rankAllocations: createDefaultFundRankAllocations(DEFAULT_FUND_ROUND_AMOUNT, match.participants.length),
+      },
     }))
     clearRoundInputs()
     dinnerPriceDisplay.value = formatPriceInput(DEFAULT_DINNER_PRICE)
@@ -823,8 +1031,12 @@ export const useBetBoard = () => {
     const myParticipantText = myParticipant
       ? `내 기준 ${myParticipant.name} ${formatWon(myParticipant.cost)}`
       : '내 기준 -'
+    const settlementText =
+      board.settlementMode === SETTLEMENT_MODE_RANK_FUND
+        ? `적립 ${formatWon(board.totalFundAmount)}`
+        : `정산 ${board.settlementRoundCount}R`
 
-    return `${match.participants.length}명 · 기록 ${board.recordedRoundCount}R · 정산 ${board.settlementRoundCount}R · ${myParticipantText}`
+    return `${match.participants.length}명 · 기록 ${board.recordedRoundCount}R · ${settlementText} · ${myParticipantText}`
   }
 
   const participantStyle = (index: number) => {
@@ -865,6 +1077,13 @@ export const useBetBoard = () => {
     newParticipantHandicap,
     roundCourseName,
     matchState,
+    settlementMode,
+    isRankFundMode,
+    fundRule,
+    fundRankAllocationTotal,
+    fundRankAllocationText,
+    canEditSettlementRule,
+    settlementModeText,
     participantsWithCosts,
     myParticipantId,
     myParticipant,
@@ -899,6 +1118,10 @@ export const useBetBoard = () => {
     getScoreInput,
     setScoreInput,
     setMyParticipant,
+    setSettlementMode,
+    updateFundRoundAmount,
+    updateFundRankAllocation,
+    resetFundRankAllocations,
     getMatchSummaryText,
     participantStyle,
     handicapMarkerStyle,
@@ -910,7 +1133,10 @@ export const useBetBoard = () => {
     getSessionMetaText,
     getHistoryScoreText,
     getHistoryAdjustmentText,
+    getHistoryFundText,
     MIN_PARTICIPANTS,
     MAX_MATCHES,
+    SETTLEMENT_MODE_SHARE_RATIO,
+    SETTLEMENT_MODE_RANK_FUND,
   }
 }

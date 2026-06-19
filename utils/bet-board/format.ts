@@ -136,3 +136,24 @@ export const getHistoryAdjustmentText = (scores: RoundScoreDetail[]) => {
     })
     .join(' · ')
 }
+
+export const getFundRankAllocationText = (rankAllocations: number[]) => {
+  if (rankAllocations.length === 0) {
+    return '-'
+  }
+
+  return rankAllocations.map((amount, index) => `${index + 1}등 ${formatWon(amount)}`).join(' · ')
+}
+
+export const getHistoryFundText = (scores: RoundScoreDetail[]) => {
+  const fundedScores = scores.filter((score) => typeof score.fundAmountDelta === 'number')
+
+  if (fundedScores.length === 0) {
+    return '적립 변화 없음'
+  }
+
+  return [...fundedScores]
+    .sort((leftScore, rightScore) => (leftScore.fundRank ?? 0) - (rightScore.fundRank ?? 0))
+    .map((score) => `${score.fundRank ?? '-'}등 ${score.participantName} +${formatWon(score.fundAmountDelta ?? 0)}`)
+    .join(' · ')
+}

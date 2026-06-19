@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
-const { appState } = useBetBoardContext()
+const { appState, isRankFundMode } = useBetBoardContext()
 
 onMounted(() => {
   const matchId = route.params.id as string
@@ -17,7 +17,7 @@ onMounted(() => {
     <PageIntro
       eyebrow="Settlement"
       title="최종 정산"
-      description="참가자별 예상 결제 금액과 정산 요약입니다."
+      :description="isRankFundMode ? '참가자별 누적 적립금과 정산 요약입니다.' : '참가자별 예상 결제 금액과 정산 요약입니다.'"
     />
     <BetBoardMyStatusPanel />
     <BetBoardSettlementPanel />

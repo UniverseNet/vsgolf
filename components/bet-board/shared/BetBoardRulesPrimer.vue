@@ -8,6 +8,10 @@ import {
 const {
   activeMatch,
   matchState,
+  isRankFundMode,
+  fundRule,
+  fundRankAllocationText,
+  settlementModeText,
   dinnerPrice,
   participantsWithCosts,
   formatWon,
@@ -32,7 +36,9 @@ const primerTitle = computed(() => (
 
 const primerDescription = computed(() => {
   if (isFirstRound.value) {
-    return '처음 이용하는 사람은 보정 타수, 부담 점수, 정산 방식을 이해해야 라운드 결과를 납득하기 쉽습니다.'
+    return isRankFundMode.value
+      ? '처음 이용하는 사람은 보정 타수, 순위 적립, 목표 금액을 이해해야 라운드 결과를 납득하기 쉽습니다.'
+      : '처음 이용하는 사람은 보정 타수, 부담 점수, 정산 방식을 이해해야 라운드 결과를 납득하기 쉽습니다.'
   }
 
   return '기록이 쌓인 뒤에도 새 참가자나 다시 확인이 필요한 사람이 있으면 같은 기준을 먼저 맞추는 것이 좋습니다.'
@@ -48,34 +54,69 @@ const participantRuleText = computed(() => {
     .join(' · ')
 })
 
-const ruleHighlights = computed(() => [
-  {
-    label: '시작 부담',
-    value: `${DEFAULT_PARTICIPANT_SHARE}점`,
-    description: '모두 같은 점수에서 시작',
-  },
-  {
-    label: '판정 기준',
-    value: `±${FIELD_AVERAGE_MINOR_THRESHOLD}타 / ±${FIELD_AVERAGE_MAJOR_THRESHOLD}타`,
-    description: '실제 타수에서 현재 핸디를 뺀 뒤 평균과 비교해 부담을 1점 또는 2점 조정',
-  },
-  {
-    label: '최종 정산',
-    value: formatWon(dinnerPrice.value),
-    description: '부담 점수 비율로 나누기',
-  },
-])
+const ruleHighlights = computed(() =>
+  isRankFundMode.value
+    ? [
+        {
+          label: '정산 방식',
+          value: settlementModeText.value,
+          description: `라운드마다 ${formatWon(fundRule.value.roundAmount)} 적립`,
+        },
+        {
+          label: '판정 기준',
+          value: '보정 타수 순위',
+          description: '실제 타수에서 현재 핸디를 뺀 뒤 낮은 순서대로 배분',
+        },
+        {
+          label: '목표 적립',
+          value: formatWon(dinnerPrice.value),
+          description: fundRankAllocationText.value,
+        },
+      ]
+    : [
+        {
+          label: '시작 부담',
+          value: `${DEFAULT_PARTICIPANT_SHARE}점`,
+          description: '모두 같은 점수에서 시작',
+        },
+        {
+          label: '판정 기준',
+          value: `±${FIELD_AVERAGE_MINOR_THRESHOLD}타 / ±${FIELD_AVERAGE_MAJOR_THRESHOLD}타`,
+          description: '실제 타수에서 현재 핸디를 뺀 뒤 평균과 비교해 부담을 1점 또는 2점 조정',
+        },
+        {
+          label: '최종 정산',
+          value: formatWon(dinnerPrice.value),
+          description: '부담 점수 비율로 나누기',
+        },
+      ],
+)
 
-const rulesShareText = computed(() => [
-  `[${activeMatch.value?.title ?? 'VSGolf 내기'} 라운드 전 룰 확인]`,
-  `- 시작 부담은 모두 ${DEFAULT_PARTICIPANT_SHARE}점입니다.`,
-  '- 실제 타수에서 현재 핸디를 뺀 보정 타수로 평균을 냅니다.',
-  `- 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 좋거나 나쁘면 부담이 1점 변합니다.`,
-  `- 평균보다 ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 좋거나 나쁘면 부담이 2점 변합니다.`,
-  '- 부담 점수 변화는 다음 라운드 핸디에도 반영됩니다.',
-  `- 최종 식사비 ${formatWon(dinnerPrice.value)}는 부담 점수 비율로 나눕니다.`,
-  `- 참가자: ${participantRuleText.value}`,
-].join('\n'))
+const rulesShareText = computed(() => {
+  if (isRankFundMode.value) {
+    return [
+      `[${activeMatch.value?.title ?? 'VSGolf 내기'} 라운드 전 룰 확인]`,
+      `- 정산 방식은 ${settlementModeText.value}입니다.`,
+      '- 실제 타수에서 현재 핸디를 뺀 보정 타수로 순위를 정합니다.',
+      `- 매 라운드 ${formatWon(fundRule.value.roundAmount)}을 순위별로 적립합니다.`,
+      `- 순위별 배분: ${fundRankAllocationText.value}`,
+      '- 같은 순위가 나오면 해당 순위들의 적립액을 나눠 반영합니다.',
+      `- 목표 적립금은 ${formatWon(dinnerPrice.value)}입니다.`,
+      `- 참가자: ${participantRuleText.value}`,
+    ].join('\n')
+  }
+
+  return [
+    `[${activeMatch.value?.title ?? 'VSGolf 내기'} 라운드 전 룰 확인]`,
+    `- 시작 부담은 모두 ${DEFAULT_PARTICIPANT_SHARE}점입니다.`,
+    '- 실제 타수에서 현재 핸디를 뺀 보정 타수로 평균을 냅니다.',
+    `- 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 좋거나 나쁘면 부담이 1점 변합니다.`,
+    `- 평균보다 ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 좋거나 나쁘면 부담이 2점 변합니다.`,
+    '- 부담 점수 변화는 다음 라운드 핸디에도 반영됩니다.',
+    `- 최종 식사비 ${formatWon(dinnerPrice.value)}는 부담 점수 비율로 나눕니다.`,
+    `- 참가자: ${participantRuleText.value}`,
+  ].join('\n')
+})
 
 const copyRules = async () => {
   try {

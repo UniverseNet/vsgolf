@@ -71,7 +71,7 @@ export default defineNuxtConfig({
         {charset: "utf-8"},
         {name: "viewport", content: "width=device-width, initial-scale=1.0, viewport-fit=cover"},
         {name: "theme-color", content: "#071e1a"},
-        {name: "description", content: "스크린골프 저녁내기 진행판 — 여러 경기의 부담 비율과 정산을 관리합니다."},
+        {name: "description", content: "스크린골프 저녁내기 진행판 — 부담 비율과 순위 적립 정산을 관리합니다."},
         {name: "mobile-web-app-capable", content: "yes"},
         {name: "apple-mobile-web-app-capable", content: "yes"},
         {name: "apple-mobile-web-app-status-bar-style", content: "default"},

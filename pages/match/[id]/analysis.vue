@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute()
 const router = useRouter()
-const { appState } = useBetBoardContext()
+const { appState, isRankFundMode } = useBetBoardContext()
 
 onMounted(() => {
   const matchId = route.params.id as string
@@ -16,8 +16,8 @@ onMounted(() => {
   <div class="match-page">
     <PageIntro
       eyebrow="Analysis"
-      title="부담 · 핸디 분석"
-      description="저녁값 부담 비율과 핸디 변화를 확인하세요."
+      :title="isRankFundMode ? '적립 · 핸디 분석' : '부담 · 핸디 분석'"
+      :description="isRankFundMode ? '누적 적립금과 핸디 변화를 확인하세요.' : '저녁값 부담 비율과 핸디 변화를 확인하세요.'"
     />
     <BetBoardMyStatusPanel />
     <BetBoardSplitPanel />

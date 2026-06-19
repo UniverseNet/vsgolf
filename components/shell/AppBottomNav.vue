@@ -38,7 +38,7 @@ const tabs = computed(() => [
   },
   {
     label: '분석',
-    meta: '비율',
+    meta: '분석',
     to: `/match/${matchId.value}/analysis`,
     iconPaths: [
       'M5 19V9',
