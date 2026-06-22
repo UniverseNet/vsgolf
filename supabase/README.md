@@ -1,6 +1,8 @@
 # Supabase 저장소 설정
 
-이 앱은 Supabase 설정이 있으면 모든 데이터를 `bet_board_state` 테이블의 JSONB 한 행에 저장하고, Realtime으로 다른 브라우저에 즉시 반영합니다. 설정이 없으면 기존처럼 브라우저 로컬 저장소를 사용합니다.
+이 앱은 Supabase 설정이 있으면 보드, 내기, 참가자, 라운드, 라운드 점수를 분리된 테이블에 저장하고, `bet_boards` 변경을 Realtime으로 구독해 다른 브라우저에 즉시 반영합니다. 설정이 없으면 기존처럼 브라우저 로컬 저장소를 사용합니다.
+
+기존 `bet_board_state` JSONB 테이블은 호환용 스냅샷으로 유지됩니다. 새 클라이언트는 `get_bet_board_state`, `save_bet_board_state` RPC를 우선 사용하고, 새 SQL이 아직 적용되지 않은 환경에서는 기존 JSONB 테이블로 fallback합니다.
 
 ## 1. 테이블과 Realtime 설정
 
@@ -8,10 +10,18 @@ Supabase Dashboard의 SQL Editor에서 [`bet-board-state.sql`](./bet-board-state
 
 이 SQL은 다음을 설정합니다.
 
-- `public.bet_board_state` 테이블 생성
-- 익명 사용자의 조회, 생성, 수정 RLS 정책
+- `public.bet_boards`, `public.bet_matches`, `public.bet_participants`, `public.bet_rounds`, `public.bet_round_scores` 테이블 생성
+- 호환용 `public.bet_board_state` JSONB 스냅샷 테이블 생성
+- `get_bet_board_state`, `save_bet_board_state`, `migrate_bet_board_state_to_relational` RPC 생성
+- 익명 사용자의 조회, 생성, 수정, 삭제 RLS 정책
 - `updated_at` 자동 갱신 트리거
 - Supabase Realtime publication 등록
+
+기존 JSONB 데이터가 이미 있다면 SQL 실행 후 아래 RPC를 한 번 호출해 분리 테이블로 옮길 수 있습니다.
+
+```sql
+select public.migrate_bet_board_state_to_relational();
+```
 
 ## 2. 환경변수 설정
 

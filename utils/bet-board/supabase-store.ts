@@ -1,7 +1,10 @@
 import type { AppState } from '~/types/bet-board'
 import { normalizeAppStateValue, serializeAppState } from './normalize'
 
-const SUPABASE_BOARD_TABLE = 'bet_board_state'
+const SUPABASE_BOARD_TABLE = 'bet_boards'
+const LEGACY_SUPABASE_BOARD_TABLE = 'bet_board_state'
+const GET_BOARD_STATE_RPC = 'get_bet_board_state'
+const SAVE_BOARD_STATE_RPC = 'save_bet_board_state'
 const REALTIME_HEARTBEAT_MS = 20_000
 const REALTIME_RECONNECT_MS = 3_000
 
@@ -27,6 +30,7 @@ interface SupabaseRealtimeSubscription {
 }
 
 interface SupabaseBoardRecord {
+  id?: string
   state?: unknown
   updated_at?: string
 }
@@ -54,8 +58,11 @@ export const isSupabaseStoreConfigured = (config: SupabaseStoreConfig) =>
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '')
 
-const getSupabaseRestUrl = (config: SupabaseStoreConfig) =>
-  `${trimTrailingSlash(config.url)}/rest/v1/${SUPABASE_BOARD_TABLE}`
+const getLegacySupabaseRestUrl = (config: SupabaseStoreConfig) =>
+  `${trimTrailingSlash(config.url)}/rest/v1/${LEGACY_SUPABASE_BOARD_TABLE}`
+
+const getSupabaseRpcUrl = (config: SupabaseStoreConfig, functionName: string) =>
+  `${trimTrailingSlash(config.url)}/rest/v1/rpc/${functionName}`
 
 const getSupabaseRealtimeUrl = (config: SupabaseStoreConfig) => {
   const realtimeUrl = trimTrailingSlash(config.url).replace(/^http/, 'ws')
@@ -84,6 +91,25 @@ const parseSupabaseRecord = (record: SupabaseBoardRecord): SupabaseBoardState | 
   }
 }
 
+const parseSupabaseState = (state: unknown, updatedAt = ''): SupabaseBoardState => ({
+  state: normalizeAppStateValue(state),
+  updatedAt,
+})
+
+const isRpcMissingResponse = async (response: Response) => {
+  if (response.status === 404) {
+    return true
+  }
+
+  if (response.status !== 400) {
+    return false
+  }
+
+  const responseText = await response.clone().text()
+
+  return responseText.includes('Could not find the function') || responseText.includes('PGRST202')
+}
+
 const getPostgresChangeRecord = (message: RealtimeMessage): SupabaseBoardRecord | null =>
   message.payload?.data?.record ?? message.payload?.record ?? null
 
@@ -103,12 +129,30 @@ const createRealtimeMessage = (
 export const fetchSupabaseBoardState = async (
   config: SupabaseStoreConfig,
 ): Promise<SupabaseBoardState | null> => {
+  const rpcResponse = await fetch(getSupabaseRpcUrl(config, GET_BOARD_STATE_RPC), {
+    body: JSON.stringify({
+      p_board_id: config.boardId,
+    }),
+    headers: getSupabaseHeaders(config),
+    method: 'POST',
+  })
+
+  if (rpcResponse.ok) {
+    const state = await rpcResponse.json()
+
+    return state ? parseSupabaseState(state) : null
+  }
+
+  if (!(await isRpcMissingResponse(rpcResponse))) {
+    throw new Error(`Supabase 조회 실패: ${rpcResponse.status}`)
+  }
+
   const params = new URLSearchParams({
     id: `eq.${config.boardId}`,
     limit: '1',
     select: 'state,updated_at',
   })
-  const response = await fetch(`${getSupabaseRestUrl(config)}?${params.toString()}`, {
+  const response = await fetch(`${getLegacySupabaseRestUrl(config)}?${params.toString()}`, {
     headers: getSupabaseHeaders(config),
   })
 
@@ -126,13 +170,31 @@ export const saveSupabaseBoardState = async (
   config: SupabaseStoreConfig,
   state: AppState,
 ) => {
+  const serializedState = JSON.parse(serializeAppState(state))
+  const rpcResponse = await fetch(getSupabaseRpcUrl(config, SAVE_BOARD_STATE_RPC), {
+    body: JSON.stringify({
+      p_board_id: config.boardId,
+      p_state: serializedState,
+    }),
+    headers: getSupabaseHeaders(config),
+    method: 'POST',
+  })
+
+  if (rpcResponse.ok) {
+    return
+  }
+
+  if (!(await isRpcMissingResponse(rpcResponse))) {
+    throw new Error(`Supabase 저장 실패: ${rpcResponse.status}`)
+  }
+
   const params = new URLSearchParams({
     on_conflict: 'id',
   })
-  const response = await fetch(`${getSupabaseRestUrl(config)}?${params.toString()}`, {
+  const response = await fetch(`${getLegacySupabaseRestUrl(config)}?${params.toString()}`, {
     body: JSON.stringify({
       id: config.boardId,
-      state: JSON.parse(serializeAppState(state)),
+      state: serializedState,
     }),
     headers: {
       ...getSupabaseHeaders(config),
@@ -154,8 +216,9 @@ export const subscribeSupabaseBoardState = (
   let reconnectTimer: number | null = null
   let ref = 1
   let closed = false
+  let realtimeTable = SUPABASE_BOARD_TABLE
   let socket: WebSocket | null = null
-  const topic = `realtime:vsgolf-board-${config.boardId}`
+  const getTopic = () => `realtime:vsgolf-board-${config.boardId}-${realtimeTable}`
 
   const nextRef = () => String(ref++)
 
@@ -171,7 +234,7 @@ export const subscribeSupabaseBoardState = (
     }
   }
 
-  const send = (event: string, payload: Record<string, unknown>, topicName = topic) => {
+  const send = (event: string, payload: Record<string, unknown>, topicName = getTopic()) => {
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       return
     }
@@ -202,13 +265,25 @@ export const subscribeSupabaseBoardState = (
             event: '*',
             filter: `id=eq.${config.boardId}`,
             schema: 'public',
-            table: SUPABASE_BOARD_TABLE,
+            table: realtimeTable,
           },
         ],
         presence: { enabled: false },
         private: false,
       },
     })
+  }
+
+  const fallbackToLegacyRealtime = () => {
+    if (realtimeTable === LEGACY_SUPABASE_BOARD_TABLE) {
+      return false
+    }
+
+    realtimeTable = LEGACY_SUPABASE_BOARD_TABLE
+    handlers.onStatus?.('기존 저장소 구독')
+    socket?.close()
+
+    return true
   }
 
   function connect() {
@@ -229,6 +304,10 @@ export const subscribeSupabaseBoardState = (
         const message = JSON.parse(String(event.data)) as RealtimeMessage
 
         if (message.event === 'phx_reply' && message.payload?.status === 'error') {
+          if (fallbackToLegacyRealtime()) {
+            return
+          }
+
           handlers.onError?.(new Error(message.payload.response?.reason ?? 'Supabase Realtime 구독 실패'))
           return
         }
@@ -238,10 +317,27 @@ export const subscribeSupabaseBoardState = (
         }
 
         const record = getPostgresChangeRecord(message)
-        const boardState = record ? parseSupabaseRecord(record) : null
+        const boardState = record?.state
+          ? parseSupabaseRecord(record)
+          : record?.id
+            ? null
+            : null
 
         if (boardState) {
           handlers.onChange(boardState)
+          return
+        }
+
+        if (record?.id) {
+          void fetchSupabaseBoardState(config)
+            .then((nextBoardState) => {
+              if (nextBoardState) {
+                handlers.onChange(nextBoardState)
+              }
+            })
+            .catch((error) => {
+              handlers.onError?.(error)
+            })
         }
       } catch (error) {
         handlers.onError?.(error)
