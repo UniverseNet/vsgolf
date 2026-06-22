@@ -727,6 +727,7 @@ const normalizeStoredAppState = (storedValue: string): AppState => {
 
   if (
     parsedValue?.version === APP_VERSION ||
+    parsedValue?.version === 10 ||
     parsedValue?.version === 9 ||
     parsedValue?.version === 8 ||
     parsedValue?.version === 7 ||

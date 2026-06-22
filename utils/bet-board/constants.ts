@@ -1,4 +1,4 @@
-export const APP_VERSION = 10
+export const APP_VERSION = 11
 export const DEFAULT_INITIAL_HANDICAP = 10
 export const DEFAULT_PARTICIPANT_SHARE = 5
 export const DEFAULT_MY_NAME = '나'
