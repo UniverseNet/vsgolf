@@ -10,10 +10,16 @@ const {
   lowestBurdenParticipant,
   leadingParticipant,
   dinnerPrice,
+  fundProgressPercent,
+  fundRemainingAmount,
   copySettlementSummary,
   getSessionMetaText,
   formatWon,
 } = useBetBoardContext()
+
+const fundProgressStyle = computed(() => ({
+  '--fund-progress-percent': `${fundProgressPercent.value}%`,
+}))
 </script>
 
 <template>
@@ -22,6 +28,25 @@ const {
       <button class="button button--neutral" type="button" @click="copySettlementSummary">
         요약 복사
       </button>
+    </div>
+
+    <div
+      v-if="isRankFundMode"
+      class="settlement-fund-progress"
+      :style="fundProgressStyle"
+      aria-label="적립 진행률"
+    >
+      <div>
+        <span>현재 적립</span>
+        <strong>{{ formatWon(matchState.totalFundAmount) }}</strong>
+      </div>
+      <div class="settlement-fund-progress__track" aria-hidden="true">
+        <span />
+      </div>
+      <small>
+        목표 {{ formatWon(dinnerPrice) }} · {{ fundProgressPercent.toFixed(1) }}% · 남은 금액
+        {{ formatWon(fundRemainingAmount) }}
+      </small>
     </div>
 
     <div class="settlement-grid">
@@ -99,6 +124,53 @@ const {
     color: var(--text);
     border-color: rgba(34, 58, 50, 0.16);
     background: linear-gradient(180deg, #ffffff, #eef5f1);
+  }
+}
+
+.settlement-fund-progress {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid rgba(7, 137, 135, 0.18);
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--teal-soft), rgba(255, 255, 255, 0.76));
+
+  div:first-child {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  span,
+  small {
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 800;
+  }
+
+  strong {
+    color: var(--text);
+    font-size: 1.72rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+}
+
+.settlement-fund-progress__track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(16, 26, 23, 0.12);
+
+  span {
+    display: block;
+    width: var(--fund-progress-percent);
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--teal), var(--mint));
+    transition: width 560ms var(--ease-out);
   }
 }
 
@@ -190,6 +262,12 @@ const {
 @media (max-width: 720px) {
   .settlement-grid {
     grid-template-columns: 1fr;
+  }
+
+  .settlement-fund-progress div:first-child {
+    align-items: start;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .settlement-actions {

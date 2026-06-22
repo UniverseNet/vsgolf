@@ -6,6 +6,9 @@ const {
   shareRatioText,
   dinnerPriceDisplay,
   dinnerPrice,
+  fundProgressPercent,
+  fundRemainingAmount,
+  fundEstimatedRemainingRoundCount,
   updateDinnerPrice,
   adjustDinnerPrice,
   setQuickDinnerPrice,
@@ -18,11 +21,41 @@ const splitSummaryText = computed(() =>
     ? `현재 적립 ${formatWon(matchState.value.totalFundAmount)} / 목표 ${formatWon(dinnerPrice.value)}`
     : shareRatioText.value,
 )
+
+const fundProgressStyle = computed(() => ({
+  '--fund-progress-percent': `${fundProgressPercent.value}%`,
+}))
 </script>
 
 <template>
   <section class="split-panel" aria-label="정산 현황">
-    <p class="split-panel__ratio">{{ splitSummaryText }}</p>
+    <div v-if="isRankFundMode" class="fund-progress" :style="fundProgressStyle" aria-label="적립 진행률">
+      <div class="fund-progress__main">
+        <span>현재 적립</span>
+        <strong>{{ formatWon(matchState.totalFundAmount) }}</strong>
+      </div>
+
+      <div class="fund-progress__meta">
+        <span>목표 {{ formatWon(dinnerPrice) }}</span>
+        <strong>{{ fundProgressPercent.toFixed(1) }}%</strong>
+      </div>
+
+      <div class="fund-progress__track" aria-hidden="true">
+        <span />
+      </div>
+
+      <div class="fund-progress__stats">
+        <span>
+          남은 금액
+          <strong>{{ formatWon(fundRemainingAmount) }}</strong>
+        </span>
+        <span>
+          예상 남은 라운드
+          <strong>{{ fundEstimatedRemainingRoundCount }}R</strong>
+        </span>
+      </div>
+    </div>
+    <p v-else class="split-panel__ratio">{{ splitSummaryText }}</p>
 
     <div class="split-bar" aria-hidden="true">
       <span
@@ -95,6 +128,93 @@ const splitSummaryText = computed(() =>
   font-size: 0.88rem;
   font-weight: 700;
   background: var(--teal-soft);
+}
+
+.fund-progress {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 16px;
+  border: 1px solid rgba(7, 137, 135, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, var(--teal-soft), rgba(255, 255, 255, 0.78)),
+    linear-gradient(90deg, rgba(7, 137, 135, 0.08), transparent 72%);
+}
+
+.fund-progress__main,
+.fund-progress__meta,
+.fund-progress__stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fund-progress__main {
+  align-items: end;
+
+  span {
+    @include muted-label-text;
+  }
+
+  strong {
+    color: var(--text);
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+}
+
+.fund-progress__meta {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+
+  strong {
+    color: #0d6f5f;
+    font-size: 1rem;
+  }
+}
+
+.fund-progress__track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(16, 26, 23, 0.12);
+
+  span {
+    display: block;
+    width: var(--fund-progress-percent);
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--teal), var(--mint));
+    transition: width 560ms var(--ease-out);
+  }
+}
+
+.fund-progress__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  span {
+    display: grid;
+    gap: 4px;
+    min-height: 58px;
+    padding: 10px;
+    border: 1px solid rgba(34, 58, 50, 0.1);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.62);
+  }
+
+  strong {
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 900;
+  }
 }
 
 .split-bar {
@@ -248,6 +368,21 @@ const splitSummaryText = computed(() =>
 }
 
 @media (max-width: 720px) {
+  .fund-progress__main,
+  .fund-progress__meta {
+    align-items: start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .fund-progress__main strong {
+    font-size: 1.72rem;
+  }
+
+  .fund-progress__stats {
+    grid-template-columns: 1fr;
+  }
+
   .dinner-price {
     grid-template-columns: 1fr;
   }

@@ -1,25 +1,44 @@
 <script setup lang="ts">
-const { matchState, isRankFundMode, lowestBurdenParticipant, leadingParticipant, leaderText, lowestBurdenText, formatWon } =
-  useBetBoardContext()
+const {
+  matchState,
+  isRankFundMode,
+  fundProgressPercent,
+  fundRemainingAmount,
+  fundEstimatedRemainingRoundCount,
+  lowestBurdenParticipant,
+  leadingParticipant,
+  leaderText,
+  lowestBurdenText,
+  dinnerPrice,
+  formatWon,
+} = useBetBoardContext()
 </script>
 
 <template>
   <section class="dashboard" aria-label="현재 내기 상태">
     <article class="metric">
-      <span class="metric__label">{{ isRankFundMode ? '최소 적립' : '최소 부담' }}</span>
+      <span class="metric__label">{{ isRankFundMode ? '현재 적립' : '최소 부담' }}</span>
       <strong class="metric__value">
-        <template v-if="lowestBurdenParticipant">
-          {{ isRankFundMode ? formatWon(lowestBurdenParticipant.cost) : `${lowestBurdenParticipant.share}점` }}
+        <template v-if="isRankFundMode">
+          {{ formatWon(matchState.totalFundAmount) }}
+        </template>
+        <template v-else-if="lowestBurdenParticipant">
+          {{ `${lowestBurdenParticipant.share}점` }}
         </template>
         <template v-else>-</template>
       </strong>
       <span class="metric__sub-value">
-        {{ lowestBurdenParticipant ? `${lowestBurdenText} · ${lowestBurdenParticipant.percent.toFixed(1)}%` : '참가자 없음' }}
+        <template v-if="isRankFundMode">
+          목표 {{ formatWon(dinnerPrice) }} · {{ fundProgressPercent.toFixed(1) }}%
+        </template>
+        <template v-else>
+          {{ lowestBurdenParticipant ? `${lowestBurdenText} · ${lowestBurdenParticipant.percent.toFixed(1)}%` : '참가자 없음' }}
+        </template>
       </span>
     </article>
 
     <article class="metric">
-      <span class="metric__label">최다 부담</span>
+      <span class="metric__label">{{ isRankFundMode ? '최다 적립' : '최다 부담' }}</span>
       <strong class="metric__value">
         <template v-if="leadingParticipant">
           {{ isRankFundMode ? formatWon(leadingParticipant.cost) : `${leadingParticipant.share}점` }}
@@ -30,10 +49,17 @@ const { matchState, isRankFundMode, lowestBurdenParticipant, leadingParticipant,
     </article>
 
     <article class="metric">
-      <span class="metric__label">기록 라운드</span>
-      <strong class="metric__value">{{ matchState.recordedRoundCount }}R</strong>
+      <span class="metric__label">{{ isRankFundMode ? '목표까지' : '기록 라운드' }}</span>
+      <strong class="metric__value">
+        {{ isRankFundMode ? formatWon(fundRemainingAmount) : `${matchState.recordedRoundCount}R` }}
+      </strong>
       <span class="metric__sub-value">
-        정산 {{ matchState.settlementRoundCount }}R · 제외 {{ matchState.excludedRoundCount }}R
+        <template v-if="isRankFundMode">
+          예상 {{ fundEstimatedRemainingRoundCount }}R · 제외 {{ matchState.excludedRoundCount }}R
+        </template>
+        <template v-else>
+          정산 {{ matchState.settlementRoundCount }}R · 제외 {{ matchState.excludedRoundCount }}R
+        </template>
       </span>
     </article>
   </section>

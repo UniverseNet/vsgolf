@@ -190,6 +190,27 @@ export const useBetBoard = () => {
   const fundRankAllocationTotal = computed(() =>
     fundRule.value.rankAllocations.reduce((total, amount) => total + amount, 0),
   )
+  const fundProgressPercent = computed(() => {
+    if (dinnerPrice.value <= 0) {
+      return 0
+    }
+
+    return Math.min(100, Math.max(0, (matchState.value.totalFundAmount / dinnerPrice.value) * 100))
+  })
+  const fundRemainingAmount = computed(() =>
+    Math.max(0, dinnerPrice.value - matchState.value.totalFundAmount),
+  )
+  const fundEstimatedRemainingRoundCount = computed(() => {
+    if (fundRemainingAmount.value <= 0) {
+      return 0
+    }
+
+    if (fundRule.value.roundAmount <= 0) {
+      return 0
+    }
+
+    return Math.ceil(fundRemainingAmount.value / fundRule.value.roundAmount)
+  })
   const canEditSettlementRule = computed(() => matchState.value.recordedRoundCount === 0)
   const settlementModeText = computed(() => (isRankFundMode.value ? '순위 적립 방식' : '부담 비율 방식'))
   const fundRankAllocationText = computed(() => getFundRankAllocationText(fundRule.value.rankAllocations))
@@ -1081,6 +1102,9 @@ export const useBetBoard = () => {
     isRankFundMode,
     fundRule,
     fundRankAllocationTotal,
+    fundProgressPercent,
+    fundRemainingAmount,
+    fundEstimatedRemainingRoundCount,
     fundRankAllocationText,
     canEditSettlementRule,
     settlementModeText,
