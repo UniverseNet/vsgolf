@@ -31,6 +31,7 @@ const {
   updateFundRankAllocation,
   resetFundRankAllocations,
   formatWon,
+  formatHandicap,
   MIN_PARTICIPANTS,
 } = useBetBoardContext()
 
@@ -74,7 +75,7 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
   <section class="setup-panel" aria-label="내기와 참가자 설정">
     <div class="setup-summary">
       <output class="setup-summary__status">
-        {{ activeMatch?.participants.length ?? 0 }}명 · 시작 핸디 평균 +{{ averageInitialHandicap.toFixed(1) }} ·
+        {{ activeMatch?.participants.length ?? 0 }}명 · 시작 핸디 평균 {{ formatHandicap(averageInitialHandicap) }} ·
         기록 {{ matchState.recordedRoundCount }}라운드
       </output>
       <p class="setup-summary__guide">{{ participantGuideText }}</p>

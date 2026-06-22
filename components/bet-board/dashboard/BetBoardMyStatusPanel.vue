@@ -6,6 +6,7 @@ const {
   isRankFundMode,
   setMyParticipant,
   formatWon,
+  formatHandicap,
 } = useBetBoardContext()
 
 const deltaClass = (value: number) => ({
@@ -113,9 +114,9 @@ const onSelectMyParticipant = (event: Event) => {
       <div class="my-status__metrics">
         <article class="my-status__metric">
           <span>현재 핸디</span>
-          <strong>+{{ myParticipantSummary.participant.handicap }}</strong>
+          <strong>{{ formatHandicap(myParticipantSummary.participant.handicap) }}</strong>
           <small :class="deltaClass(myParticipantSummary.handicapDelta)">
-            시작 +{{ myParticipantSummary.participant.initialHandicap }} ·
+            시작 {{ formatHandicap(myParticipantSummary.participant.initialHandicap) }} ·
             {{ formatSignedNumber(myParticipantSummary.handicapDelta) }}
           </small>
         </article>

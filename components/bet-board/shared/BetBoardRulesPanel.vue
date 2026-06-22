@@ -18,6 +18,7 @@ const {
   dinnerPrice,
   participantsWithCosts,
   formatWon,
+  formatHandicap,
 } = useBetBoardContext()
 
 const copyStatusText = ref('룰 설명 복사')
@@ -30,7 +31,7 @@ const participantRuleText = computed(() => {
   }
 
   return participantsWithCosts.value
-    .map((participant) => `${participant.name} +${participant.initialHandicap}`)
+    .map((participant) => `${participant.name} ${formatHandicap(participant.initialHandicap)}`)
     .join(' · ')
 })
 

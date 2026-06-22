@@ -24,6 +24,7 @@ const {
   getScoreInput,
   setScoreInput,
   formatWon,
+  formatHandicap,
   MIN_PARTICIPANTS,
 } = useBetBoardContext()
 
@@ -158,10 +159,10 @@ const onScoreInput = (participantId: string, event: Event) => {
           <strong>{{ participant.name }}</strong>
           <span>
             <template v-if="isRankFundMode">
-              적립 {{ formatWon(participant.fundAmount) }} · 핸디 +{{ participant.handicap }}
+              적립 {{ formatWon(participant.fundAmount) }} · 핸디 {{ formatHandicap(participant.handicap) }}
             </template>
             <template v-else>
-              {{ participant.share }}점 · 핸디 +{{ participant.handicap }}
+              {{ participant.share }}점 · 핸디 {{ formatHandicap(participant.handicap) }}
             </template>
           </span>
           <input

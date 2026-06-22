@@ -26,6 +26,7 @@ import {
 } from '~/utils/bet-board/constants'
 import {
   formatDateText,
+  formatHandicap,
   formatPriceInput,
   formatWon,
   getFundRankAllocationText,
@@ -1153,6 +1154,7 @@ export const useBetBoard = () => {
     getParticipantColor,
     getHandicapPercent,
     formatWon,
+    formatHandicap,
     formatDateText,
     getSessionMetaText,
     getHistoryScoreText,

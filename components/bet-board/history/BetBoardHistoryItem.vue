@@ -6,7 +6,7 @@ import {
   SETTLEMENT_MODE_RANK_FUND,
   TOTAL_ROUND_HOLES,
 } from '~/utils/bet-board/constants'
-import { formatRoundCourseText, formatWon } from '~/utils/bet-board/format'
+import { formatHandicap, formatRoundCourseText, formatWon } from '~/utils/bet-board/format'
 
 const props = defineProps<{
   entry: ScoredRoundHistoryEntry
@@ -207,7 +207,7 @@ const scoreRecordRows = computed(() =>
       name: score.participantName,
       strokesText: `${score.strokes}타`,
       handicapAppliedText:
-        typeof score.handicapApplied === 'number' ? `+${formatDecimal(score.handicapApplied)}` : '-',
+        typeof score.handicapApplied === 'number' ? formatHandicap(score.handicapApplied) : '-',
       adjustedStrokesText:
         typeof score.adjustedStrokes === 'number' ? `${formatDecimal(score.adjustedStrokes)}타` : '-',
       differenceText: formatSignedDecimal(score.differenceFromAverage, '타'),
@@ -223,7 +223,9 @@ const scoreRecordRows = computed(() =>
             : '-',
       handicapChangeText:
         typeof score.handicapDelta === 'number'
-          ? `${formatSignedDecimal(score.handicapDelta)} → +${score.handicapAfter ?? '-'}`
+          ? `${formatSignedDecimal(score.handicapDelta)} → ${
+              typeof score.handicapAfter === 'number' ? formatHandicap(score.handicapAfter) : '-'
+            }`
           : isSettlementExcluded.value
             ? '0'
             : '-',

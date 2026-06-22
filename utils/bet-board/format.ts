@@ -18,6 +18,16 @@ export const formatPriceInput = (value: string | number) => {
 
 export const formatWon = (amount: number) => `${currencyFormatter.format(Math.round(amount))}원`
 
+export const formatHandicap = (handicap: number) => {
+  if (Math.abs(handicap) < 0.05) {
+    return '0'
+  }
+
+  const formattedHandicap = Number.isInteger(handicap) ? String(handicap) : handicap.toFixed(1)
+
+  return handicap > 0 ? `+${formattedHandicap}` : formattedHandicap
+}
+
 export const formatDateText = (dateValue: string) => {
   if (!dateValue) {
     return '날짜 미입력'
@@ -97,7 +107,7 @@ export const getHandicapDeltaText = (participant: ParticipantWithCost) => {
     return '시작 기준'
   }
 
-  return delta > 0 ? `시작보다 +${delta}` : `시작보다 ${delta}`
+  return `시작보다 ${formatHandicap(delta)}`
 }
 
 export const getHistoryScoreText = (

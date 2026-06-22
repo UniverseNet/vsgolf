@@ -6,14 +6,14 @@ defineProps<{
   participant: ParticipantWithCost
 }>()
 
-const { handicapMarkerStyle } = useBetBoardContext()
+const { handicapMarkerStyle, formatHandicap } = useBetBoardContext()
 </script>
 
 <template>
   <article class="handicap-item">
     <div class="handicap-item__header">
       <strong>{{ participant.name }}</strong>
-      <span>+{{ participant.handicap }}</span>
+      <span>{{ formatHandicap(participant.handicap) }}</span>
     </div>
     <div class="handicap-item__track">
       <span class="handicap-item__marker" :style="handicapMarkerStyle(participant)" />

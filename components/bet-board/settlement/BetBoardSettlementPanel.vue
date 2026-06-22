@@ -15,6 +15,7 @@ const {
   copySettlementSummary,
   getSessionMetaText,
   formatWon,
+  formatHandicap,
 } = useBetBoardContext()
 
 const fundProgressStyle = computed(() => ({
@@ -85,10 +86,10 @@ const fundProgressStyle = computed(() => ({
         <strong>{{ formatWon(participant.cost) }}</strong>
         <small>
           <template v-if="isRankFundMode">
-            누적 적립 · {{ participant.percent.toFixed(1) }}% · 핸디 +{{ participant.handicap }}
+            누적 적립 · {{ participant.percent.toFixed(1) }}% · 핸디 {{ formatHandicap(participant.handicap) }}
           </template>
           <template v-else>
-            {{ participant.share }}점 · {{ participant.percent.toFixed(1) }}% · 핸디 +{{ participant.handicap }}
+            {{ participant.share }}점 · {{ participant.percent.toFixed(1) }}% · 핸디 {{ formatHandicap(participant.handicap) }}
           </template>
         </small>
       </article>
