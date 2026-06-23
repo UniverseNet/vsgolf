@@ -214,7 +214,7 @@ begin
     values (
       v_match_id,
       p_board_id,
-      coalesce(v_match.data->>'title', '오늘 내기'),
+      coalesce(v_match.data->>'title', '내기'),
       coalesce(v_match.data->>'date', ''),
       coalesce((v_match.data->>'dinnerPrice')::integer, 0),
       coalesce(v_match.data->>'settlementMode', 'share-ratio'),

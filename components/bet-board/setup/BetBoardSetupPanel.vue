@@ -89,7 +89,7 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
           v-model="activeMatch!.title"
           type="text"
           maxlength="24"
-          placeholder="오늘 내기"
+          placeholder="내기"
           autocomplete="off"
           @change="updateSessionTitle"
         />

@@ -752,7 +752,7 @@ export const buildSettlementSummary = ({
     )} / 현재 적립 ${formatWon(totalFundAmount)} / ${participants.map((participant) => `${participant.name} ${formatWon(participant.cost)}`).join(', ')}`
   }
 
-  return `저녁내기 결과: ${session.title} / 참가자 ${participants.length}명 / 기록 ${roundCount}라운드 / ${settlementRoundText} / ${formatWon(
+  return `내기 결과: ${session.title} / 참가자 ${participants.length}명 / 기록 ${roundCount}라운드 / ${settlementRoundText} / ${formatWon(
     dinnerPrice,
   )} 기준 / ${participants.map((participant) => `${participant.name} ${participant.share}점 ${formatWon(participant.cost)}`).join(', ')}`
 }

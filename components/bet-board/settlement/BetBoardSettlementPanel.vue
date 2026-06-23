@@ -61,7 +61,7 @@ const fundProgressStyle = computed(() => ({
         <strong>{{ isRankFundMode ? settlementModeText : shareRatioText }}</strong>
       </article>
       <article class="settlement-card">
-        <span>{{ isRankFundMode ? '목표 적립금' : '총 저녁값' }}</span>
+        <span>{{ isRankFundMode ? '목표 적립금' : '총 정산 금액' }}</span>
         <strong>{{ formatWon(dinnerPrice) }}</strong>
       </article>
       <article class="settlement-card">

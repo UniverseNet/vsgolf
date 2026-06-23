@@ -17,7 +17,7 @@ onMounted(() => {
     <PageIntro
       eyebrow="Analysis"
       :title="isRankFundMode ? '적립 · 핸디 분석' : '부담 · 핸디 분석'"
-      :description="isRankFundMode ? '누적 적립금과 핸디 변화를 확인하세요.' : '저녁값 부담 비율과 핸디 변화를 확인하세요.'"
+      :description="isRankFundMode ? '누적 적립금과 핸디 변화를 확인하세요.' : '부담 비율과 핸디 변화를 확인하세요.'"
     />
     <BetBoardMyStatusPanel />
     <BetBoardSplitPanel />

@@ -243,7 +243,7 @@ func render(target: SplashTarget) throws {
     shadowAlpha: 0.34
   )
   drawCenteredText(
-    "저녁내기 보드",
+    "내기 보드",
     font: .systemFont(ofSize: titleFontSize, weight: .bold),
     textColor: color(hex: "#c7f6e6"),
     centerX: canvas.midX,

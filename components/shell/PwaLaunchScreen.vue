@@ -7,7 +7,7 @@ const appBaseURL = useRuntimeConfig().app.baseURL
     <div class="pwa-launch-screen__brand">
       <img class="pwa-launch-screen__icon" :src="`${appBaseURL}apple-touch-icon.png`" alt="" />
       <strong class="pwa-launch-screen__name">VSGolf</strong>
-      <span class="pwa-launch-screen__title">저녁내기 보드</span>
+      <span class="pwa-launch-screen__title">내기 보드</span>
       <span class="pwa-launch-screen__description">라운드 부담 · 실시간 정산</span>
     </div>
     <div class="pwa-launch-screen__bar">

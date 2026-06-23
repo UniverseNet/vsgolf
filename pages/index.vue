@@ -56,8 +56,8 @@ const onCreateMatch = () => {
 <template>
   <div class="home-page">
     <section class="home-hero">
-      <p class="home-hero__eyebrow">Screen Golf Dinner Bet</p>
-      <h1 class="home-hero__title">저녁내기 보드</h1>
+      <p class="home-hero__eyebrow">Screen Golf Bet</p>
+      <h1 class="home-hero__title">내기 보드</h1>
       <p class="home-hero__description">
         처음이라면 내기 설정부터 시작하세요. 참가자, 라운드 타수, 정산까지 한 흐름으로
         이어집니다.
@@ -70,7 +70,7 @@ const onCreateMatch = () => {
     <section class="home-guide" aria-labelledby="homeGuideTitle">
       <div class="home-guide__header">
         <p>Quick Start</p>
-        <h2 id="homeGuideTitle">오늘 내기 진행 순서</h2>
+        <h2 id="homeGuideTitle">내기 진행 순서</h2>
       </div>
 
       <ol class="home-guide__steps">

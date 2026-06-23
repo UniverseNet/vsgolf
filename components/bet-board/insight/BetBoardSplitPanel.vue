@@ -80,7 +80,7 @@ const fundProgressStyle = computed(() => ({
     </div>
 
     <label class="dinner-price" for="dinnerPriceInput">
-      <span>{{ isRankFundMode ? '목표 적립금' : '예상 저녁값' }}</span>
+      <span>{{ isRankFundMode ? '목표 적립금' : '예상 정산 금액' }}</span>
       <span class="price-input">
         <input
           id="dinnerPriceInput"
@@ -94,7 +94,7 @@ const fundProgressStyle = computed(() => ({
       </span>
     </label>
 
-    <div class="quick-amounts" :aria-label="isRankFundMode ? '목표 적립금 빠른 조정' : '저녁값 빠른 조정'">
+    <div class="quick-amounts" :aria-label="isRankFundMode ? '목표 적립금 빠른 조정' : '정산 금액 빠른 조정'">
       <button class="quick-amounts__button" type="button" @click="adjustDinnerPrice(-10000)">-1만</button>
       <button class="quick-amounts__button" type="button" @click="adjustDinnerPrice(10000)">+1만</button>
       <button class="quick-amounts__button" type="button" @click="setQuickDinnerPrice(50000)">5만</button>

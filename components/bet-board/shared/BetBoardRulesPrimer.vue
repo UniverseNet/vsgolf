@@ -114,7 +114,7 @@ const rulesShareText = computed(() => {
     `- 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 좋거나 나쁘면 부담이 1점 변합니다.`,
     `- 평균보다 ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 좋거나 나쁘면 부담이 2점 변합니다.`,
     '- 부담 점수 변화는 다음 라운드 핸디에도 반영됩니다.',
-    `- 최종 식사비 ${formatWon(dinnerPrice.value)}는 부담 점수 비율로 나눕니다.`,
+    `- 최종 정산 금액 ${formatWon(dinnerPrice.value)}는 부담 점수 비율로 나눕니다.`,
     `- 참가자: ${participantRuleText.value}`,
   ].join('\n')
 })

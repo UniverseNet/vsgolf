@@ -61,7 +61,7 @@ const ruleSummaryItems = computed(() => [
     description: participantRuleText.value,
   },
   {
-    label: isRankFundMode.value ? '목표 적립금' : '식사비',
+    label: isRankFundMode.value ? '목표 적립금' : '정산 금액',
     value: formatWon(dinnerPrice.value),
     description: isRankFundMode.value
       ? `매 라운드 ${formatWon(fundRule.value.roundAmount)}씩 적립합니다.`
@@ -142,7 +142,7 @@ const ruleSteps = computed(() =>
         },
         {
           number: '5',
-          title: '마지막에는 부담 점수 비율로 식사비를 나눕니다',
+          title: '마지막에는 부담 점수 비율로 정산 금액을 나눕니다',
           description:
             '현재 부담 점수 합계를 기준으로 각자의 결제 금액을 계산합니다. 기록에서 라운드별 금액 변화도 다시 볼 수 있습니다.',
         },
@@ -219,7 +219,7 @@ const rulesShareText = computed(() => {
     `4. 평균보다 ${FIELD_AVERAGE_MINOR_THRESHOLD}타 이상 나쁘면 +1점, ${FIELD_AVERAGE_MAJOR_THRESHOLD}타 이상 나쁘면 +2점입니다.`,
     '5. 부담 점수 변화는 다음 라운드 핸디에도 같이 반영됩니다.',
     '6. 중도 종료 라운드는 부분 반영 또는 정산 제외 중 선택합니다.',
-    `7. 최종 식사비 ${formatWon(dinnerPrice.value)}는 부담 점수 비율로 나눕니다.`,
+    `7. 최종 정산 금액 ${formatWon(dinnerPrice.value)}는 부담 점수 비율로 나눕니다.`,
     participantsWithCosts.value.length > 0 ? `현재 참가자: ${participantRuleText.value}` : '',
   ].filter(Boolean).join('\n')
 })
