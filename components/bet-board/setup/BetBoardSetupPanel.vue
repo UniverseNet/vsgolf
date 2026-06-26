@@ -62,12 +62,24 @@ const settlementRuleLockText = computed(() =>
   canEditSettlementRule.value ? '첫 라운드 저장 전까지 변경 가능' : '라운드 기록 후 변경 불가',
 )
 
-const onFundRoundAmountChange = (event: Event) => {
-  updateFundRoundAmount((event.target as HTMLInputElement).value)
+const settlementModeModel = computed<SettlementMode>({
+  get: () => settlementMode.value,
+  set: (mode) => setSettlementMode(mode),
+})
+
+const newParticipantHandicapModel = computed({
+  get: () => Number(newParticipantHandicap.value),
+  set: (value: number | undefined) => {
+    newParticipantHandicap.value = String(value ?? 0)
+  },
+})
+
+const onFundRoundAmountChange = (amount: number | null | undefined) => {
+  updateFundRoundAmount(amount ?? 0)
 }
 
-const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
-  updateFundRankAllocation(rankIndex, (event.target as HTMLInputElement).value)
+const onFundRankAllocationChange = (rankIndex: number, amount: number | null | undefined) => {
+  updateFundRankAllocation(rankIndex, amount ?? 0)
 }
 </script>
 
@@ -84,23 +96,26 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
     <div class="setup-grid setup-grid--session">
       <label class="setup-field" for="sessionTitleInput">
         <span>내기 이름</span>
-        <input
+        <ElInput
           id="sessionTitleInput"
           v-model="activeMatch!.title"
-          type="text"
-          maxlength="24"
+          :maxlength="24"
           placeholder="내기"
           autocomplete="off"
+          clearable
           @change="updateSessionTitle"
         />
       </label>
 
       <label class="setup-field" for="sessionDateInput">
         <span>내기 날짜</span>
-        <input
+        <ElDatePicker
           id="sessionDateInput"
           v-model="activeMatch!.date"
           type="date"
+          value-format="YYYY-MM-DD"
+          format="YYYY.MM.DD"
+          :clearable="false"
           @change="updateSessionDate"
         />
       </label>
@@ -112,50 +127,49 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
         <span>{{ settlementRuleLockText }}</span>
       </div>
 
-      <div class="settlement-mode-options" role="radiogroup" aria-label="정산 방식 선택">
-        <label
+      <ElRadioGroup
+        v-model="settlementModeModel"
+        class="settlement-mode-options"
+        :disabled="!canEditSettlementRule"
+        aria-label="정산 방식 선택"
+      >
+        <ElRadio
           v-for="option in settlementModeOptions"
           :key="option.value"
           class="settlement-mode-option"
           :class="{ 'settlement-mode-option--active': settlementMode === option.value }"
+          :value="option.value"
+          border
         >
-          <input
-            type="radio"
-            name="settlementMode"
-            :value="option.value"
-            :checked="settlementMode === option.value"
-            :disabled="!canEditSettlementRule"
-            @change="setSettlementMode(option.value)"
-          />
           <strong>{{ option.title }}</strong>
           <small>{{ option.description }}</small>
-        </label>
-      </div>
+        </ElRadio>
+      </ElRadioGroup>
 
       <div v-if="isRankFundMode" class="fund-rule">
         <div class="setup-grid setup-grid--fund">
           <label class="setup-field" for="fundTargetAmountInput">
             <span>목표 적립금</span>
-            <input
+            <ElInput
               id="fundTargetAmountInput"
               v-model="dinnerPriceDisplay"
-              type="text"
               inputmode="numeric"
               autocomplete="off"
               :disabled="!canEditSettlementRule"
               @input="updateDinnerPrice"
-            />
+            >
+              <template #suffix>원</template>
+            </ElInput>
           </label>
 
           <label class="setup-field" for="fundRoundAmountInput">
             <span>라운드 적립금</span>
-            <input
+            <ElInputNumber
               id="fundRoundAmountInput"
-              :value="fundRule.roundAmount"
-              type="number"
-              min="0"
-              step="1000"
-              inputmode="numeric"
+              :model-value="fundRule.roundAmount"
+              :min="0"
+              :step="1000"
+              controls-position="right"
               :disabled="!canEditSettlementRule"
               @change="onFundRoundAmountChange"
             />
@@ -178,25 +192,23 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
             class="fund-rank-field"
           >
             <span>{{ rankIndex + 1 }}등</span>
-            <input
-              :value="rankAmount"
-              type="number"
-              min="0"
-              step="1000"
-              inputmode="numeric"
+            <ElInputNumber
+              :model-value="rankAmount"
+              :min="0"
+              :step="1000"
+              controls-position="right"
               :disabled="!canEditSettlementRule"
               @change="onFundRankAllocationChange(rankIndex, $event)"
             />
           </label>
 
-          <button
+          <ElButton
             class="fund-rank-list__reset"
-            type="button"
             :disabled="!canEditSettlementRule || participantCount === 0"
             @click="resetFundRankAllocations"
           >
             기본 배분
-          </button>
+          </ElButton>
         </div>
       </div>
     </div>
@@ -204,33 +216,32 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
     <div class="setup-grid setup-grid--participant">
       <label class="setup-field" for="participantNameInput">
         <span>새 참가자 이름</span>
-        <input
+        <ElInput
           id="participantNameInput"
           v-model="newParticipantName"
-          type="text"
-          maxlength="20"
+          :maxlength="20"
           placeholder="이름 입력"
           autocomplete="off"
+          clearable
           @keydown.enter="addParticipant"
         />
       </label>
 
       <label class="setup-field setup-field--handicap" for="participantHandicapInput">
         <span>시작 핸디</span>
-        <input
+        <ElInputNumber
           id="participantHandicapInput"
-          v-model="newParticipantHandicap"
-          type="number"
-          min="0"
-          max="99"
-          step="1"
-          inputmode="numeric"
+          v-model="newParticipantHandicapModel"
+          :min="0"
+          :max="99"
+          :step="1"
+          controls-position="right"
         />
       </label>
 
-      <button class="button button--primary" type="button" @click="addParticipant">
+      <ElButton class="setup-add-button" type="primary" size="large" @click="addParticipant">
         참가자 추가
-      </button>
+      </ElButton>
     </div>
 
     <div class="participant-list" aria-label="참가자 목록">
@@ -306,21 +317,6 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
   color: var(--muted);
   font-size: 0.84rem;
   font-weight: 600;
-
-  input {
-    @include form-input;
-  }
-}
-
-.button {
-  @include button-base;
-  padding: 0 16px;
-  white-space: nowrap;
-
-  &--primary {
-    color: #fff;
-    background: linear-gradient(135deg, var(--teal), var(--mint));
-  }
 }
 
 .settlement-rule {
@@ -355,12 +351,16 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  width: 100%;
 }
 
 .settlement-mode-option {
   display: grid;
   gap: 5px;
+  align-items: start;
   min-height: 92px;
+  height: auto;
+  margin: 0;
   padding: 13px;
   border: 1px solid rgba(34, 58, 50, 0.12);
   border-radius: 8px;
@@ -371,13 +371,12 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
     box-shadow 160ms ease,
     transform 160ms var(--ease-out);
 
-  input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
+  :deep(.el-radio__label) {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    padding-left: 8px;
+    white-space: normal;
   }
 
   strong {
@@ -393,11 +392,7 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
     line-height: 1.45;
   }
 
-  &:has(input:focus-visible) {
-    box-shadow: 0 0 0 4px rgba(56, 201, 141, 0.18);
-  }
-
-  &:has(input:disabled) {
+  &.is-disabled {
     cursor: not-allowed;
     opacity: 0.72;
   }
@@ -450,27 +445,20 @@ const onFundRankAllocationChange = (rankIndex: number, event: Event) => {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
-
-  input {
-    @include form-input;
-    min-height: 40px;
-  }
 }
 
 .fund-rank-list__reset {
+  align-self: end;
+  width: 100%;
   min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid rgba(34, 58, 50, 0.14);
-  border-radius: 8px;
-  color: var(--text);
   font-size: 0.8rem;
   font-weight: 900;
-  background: rgba(255, 255, 255, 0.78);
+}
 
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.56;
-  }
+.setup-add-button {
+  align-self: end;
+  min-width: 118px;
+  white-space: nowrap;
 }
 
 .participant-list {

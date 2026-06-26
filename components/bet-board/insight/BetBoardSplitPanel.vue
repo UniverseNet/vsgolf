@@ -81,26 +81,25 @@ const fundProgressStyle = computed(() => ({
 
     <label class="dinner-price" for="dinnerPriceInput">
       <span>{{ isRankFundMode ? '목표 적립금' : '예상 정산 금액' }}</span>
-      <span class="price-input">
-        <input
-          id="dinnerPriceInput"
-          v-model="dinnerPriceDisplay"
-          type="text"
-          inputmode="numeric"
-          autocomplete="off"
-          @input="updateDinnerPrice"
-        />
-        <span class="price-input__unit" aria-hidden="true">원</span>
-      </span>
+      <ElInput
+        id="dinnerPriceInput"
+        v-model="dinnerPriceDisplay"
+        class="price-input"
+        inputmode="numeric"
+        autocomplete="off"
+        @input="updateDinnerPrice"
+      >
+        <template #suffix>원</template>
+      </ElInput>
     </label>
 
     <div class="quick-amounts" :aria-label="isRankFundMode ? '목표 적립금 빠른 조정' : '정산 금액 빠른 조정'">
-      <button class="quick-amounts__button" type="button" @click="adjustDinnerPrice(-10000)">-1만</button>
-      <button class="quick-amounts__button" type="button" @click="adjustDinnerPrice(10000)">+1만</button>
-      <button class="quick-amounts__button" type="button" @click="setQuickDinnerPrice(50000)">5만</button>
-      <button class="quick-amounts__button" type="button" @click="setQuickDinnerPrice(100000)">10만</button>
-      <button class="quick-amounts__button" type="button" @click="setQuickDinnerPrice(150000)">15만</button>
-      <button class="quick-amounts__button" type="button" @click="setQuickDinnerPrice(200000)">20만</button>
+      <ElButton class="quick-amounts__button" @click="adjustDinnerPrice(-10000)">-1만</ElButton>
+      <ElButton class="quick-amounts__button" @click="adjustDinnerPrice(10000)">+1만</ElButton>
+      <ElButton class="quick-amounts__button" @click="setQuickDinnerPrice(50000)">5만</ElButton>
+      <ElButton class="quick-amounts__button" @click="setQuickDinnerPrice(100000)">10만</ElButton>
+      <ElButton class="quick-amounts__button" @click="setQuickDinnerPrice(150000)">15만</ElButton>
+      <ElButton class="quick-amounts__button" @click="setQuickDinnerPrice(200000)">20만</ElButton>
     </div>
 
     <div class="amount-grid amount-grid--participants" aria-label="참가자별 예상 결제 금액">
@@ -261,32 +260,10 @@ const fundProgressStyle = computed(() => ({
   color: var(--muted);
   font-size: 0.88rem;
   font-weight: 700;
-
-  input {
-    @include form-input;
-  }
 }
 
 .price-input {
-  position: relative;
-  display: block;
   min-width: 0;
-
-  input {
-    padding-right: 42px;
-    text-align: right;
-  }
-}
-
-.price-input__unit {
-  position: absolute;
-  right: 13px;
-  top: 50%;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 700;
-  transform: translateY(-50%);
-  pointer-events: none;
 }
 
 .quick-amounts {
@@ -297,21 +274,13 @@ const fundProgressStyle = computed(() => ({
 }
 
 .quick-amounts__button {
+  width: 100%;
   min-height: 36px;
-  border: 1px solid rgba(34, 58, 50, 0.14);
-  border-radius: 8px;
-  color: var(--text);
   font-size: 0.84rem;
   font-weight: 800;
-  background: rgba(255, 255, 255, 0.7);
-  transition:
-    border-color 140ms ease,
-    box-shadow 140ms ease,
-    transform 140ms ease;
 
   &:hover {
     transform: translateY(-1px);
-    border-color: rgba(7, 137, 135, 0.28);
     box-shadow: 0 8px 16px rgba(16, 26, 23, 0.08);
   }
 }

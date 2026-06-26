@@ -1,15 +1,5 @@
 <script setup lang="ts">
-const route = useRoute()
-const router = useRouter()
-const { appState, isRankFundMode } = useBetBoardContext()
-
-onMounted(() => {
-  const matchId = route.params.id as string
-
-  if (!appState.value.matches.some((match) => match.id === matchId)) {
-    router.replace('/')
-  }
-})
+const { isRankFundMode } = useBetBoardContext()
 </script>
 
 <template>

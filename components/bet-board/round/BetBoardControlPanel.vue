@@ -64,8 +64,28 @@ const partialRoundPolicyOptions: Array<{
   },
 ]
 
-const onScoreInput = (participantId: string, event: Event) => {
-  setScoreInput(participantId, (event.target as HTMLInputElement).value)
+const holesPlayedModel = computed({
+  get: () => Number(holesPlayedInput.value),
+  set: (value: number | undefined) => {
+    holesPlayedInput.value = String(value ?? 1)
+  },
+})
+
+const partialRoundPolicyModel = computed<PartialRoundPolicy>({
+  get: () => partialRoundPolicy.value,
+  set: (policy) => {
+    partialRoundPolicy.value = policy
+  },
+})
+
+const getScoreInputNumber = (participantId: string) => {
+  const score = Number(getScoreInput(participantId))
+
+  return Number.isFinite(score) && score > 0 ? score : undefined
+}
+
+const onScoreInput = (participantId: string, score: number | undefined) => {
+  setScoreInput(participantId, typeof score === 'number' ? String(score) : '')
 }
 </script>
 
@@ -85,60 +105,57 @@ const onScoreInput = (participantId: string, event: Event) => {
 
     <label class="round-course-field" for="roundCourseInput">
       <span>골프장 <em class="round-course-field__optional">선택</em></span>
-      <input
+      <ElInput
         id="roundCourseInput"
         v-model="roundCourseName"
-        type="text"
-        maxlength="24"
+        :maxlength="24"
         placeholder="이번 라운드 골프장"
         autocomplete="off"
+        clearable
         @keydown.enter.prevent="applyRoundResult"
       />
     </label>
 
     <div class="partial-round-panel" :class="{ 'partial-round-panel--active': isPartialRound }">
-      <label class="partial-round-toggle">
-        <input v-model="isPartialRound" type="checkbox" />
-        <span class="partial-round-toggle__control" aria-hidden="true"></span>
+      <div class="partial-round-toggle">
+        <ElSwitch v-model="isPartialRound" aria-label="18홀 미완료 여부" />
         <span class="partial-round-toggle__copy">
           <strong>18홀 미완료</strong>
           <small>{{ isPartialRound ? '중도 종료 라운드' : '18홀 완료 라운드' }}</small>
         </span>
-      </label>
+      </div>
 
       <div v-show="isPartialRound" class="partial-round-options">
         <label class="holes-played-field" for="holesPlayedInput">
           <span>진행 홀</span>
-          <input
+          <ElInputNumber
             id="holesPlayedInput"
-            v-model="holesPlayedInput"
-            type="number"
-            min="1"
+            v-model="holesPlayedModel"
+            :min="1"
             :max="TOTAL_ROUND_HOLES - 1"
-            step="1"
-            inputmode="numeric"
-            autocomplete="off"
+            :step="1"
+            controls-position="right"
             @keydown.enter.prevent="applyRoundResult"
           />
         </label>
 
-        <div class="partial-policy-group" role="radiogroup" aria-label="중도 종료 정산 방식">
-          <label
+        <ElRadioGroup
+          v-model="partialRoundPolicyModel"
+          class="partial-policy-group"
+          aria-label="중도 종료 정산 방식"
+        >
+          <ElRadio
             v-for="option in partialRoundPolicyOptions"
             :key="option.value"
             class="partial-policy"
             :class="{ 'partial-policy--active': partialRoundPolicy === option.value }"
+            :value="option.value"
+            border
           >
-            <input
-              v-model="partialRoundPolicy"
-              type="radio"
-              name="partialRoundPolicy"
-              :value="option.value"
-            />
             <strong>{{ option.label }}</strong>
             <small>{{ option.description }}</small>
-          </label>
-        </div>
+          </ElRadio>
+        </ElRadioGroup>
       </div>
     </div>
 
@@ -165,16 +182,14 @@ const onScoreInput = (participantId: string, event: Event) => {
               {{ participant.share }}점 · 핸디 {{ formatHandicap(participant.handicap) }}
             </template>
           </span>
-          <input
-            type="number"
-            min="1"
-            max="200"
-            step="1"
-            inputmode="numeric"
+          <ElInputNumber
+            :model-value="getScoreInputNumber(participant.id)"
+            :min="1"
+            :max="200"
+            :step="1"
+            controls-position="right"
             placeholder="타수"
-            autocomplete="off"
-            :value="getScoreInput(participant.id)"
-            @input="onScoreInput(participant.id, $event)"
+            @update:model-value="onScoreInput(participant.id, $event)"
             @keydown.enter.prevent="applyRoundResult"
           />
         </label>
@@ -182,25 +197,26 @@ const onScoreInput = (participantId: string, event: Event) => {
     </div>
 
     <div class="control-actions">
-      <button
+      <ElButton
         class="result-button result-button--win"
-        type="button"
+        type="primary"
+        size="large"
         :disabled="(activeMatch?.participants.length ?? 0) < MIN_PARTICIPANTS"
         @click="applyRoundResult"
       >
         결과 입력
-      </button>
-      <button
+      </ElButton>
+      <ElButton
         class="button button--neutral"
-        type="button"
+        size="large"
         :disabled="matchState.recordedRoundCount === 0"
         @click="undoLastResult"
       >
         되돌리기
-      </button>
-      <button class="button button--neutral" type="button" @click="resetBoard">
+      </ElButton>
+      <ElButton class="button button--neutral" size="large" @click="resetBoard">
         초기화
-      </button>
+      </ElButton>
     </div>
   </section>
 </template>
@@ -273,10 +289,6 @@ const onScoreInput = (participantId: string, event: Event) => {
   color: var(--muted);
   font-size: 0.84rem;
   font-weight: 600;
-
-  input {
-    @include form-input;
-  }
 }
 
 .round-course-field__optional {
@@ -304,56 +316,6 @@ const onScoreInput = (participantId: string, event: Event) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  cursor: pointer;
-
-  input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-
-    &:checked + .partial-round-toggle__control {
-      border-color: rgba(7, 137, 135, 0.38);
-      background: linear-gradient(135deg, var(--teal), var(--mint));
-
-      &::after {
-        transform: translateX(18px);
-      }
-    }
-
-    &:focus-visible + .partial-round-toggle__control {
-      box-shadow: 0 0 0 4px rgba(56, 201, 141, 0.18);
-    }
-  }
-}
-
-.partial-round-toggle__control {
-  position: relative;
-  flex: 0 0 auto;
-  width: 42px;
-  height: 24px;
-  border: 1px solid rgba(34, 58, 50, 0.18);
-  border-radius: 999px;
-  background: #dce7e2;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    box-shadow 160ms ease;
-
-  &::after {
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(16, 26, 23, 0.2);
-    transition: transform 160ms var(--ease-out);
-    content: '';
-  }
 }
 
 .partial-round-toggle__copy {
@@ -388,20 +350,13 @@ const onScoreInput = (participantId: string, event: Event) => {
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 700;
-
-  input {
-    @include form-input;
-    min-height: 58px;
-    font-size: 1.18rem;
-    font-weight: 800;
-    text-align: center;
-  }
 }
 
 .partial-policy-group {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  width: 100%;
 }
 
 .partial-policy {
@@ -409,6 +364,8 @@ const onScoreInput = (participantId: string, event: Event) => {
   gap: 4px;
   min-width: 0;
   min-height: 74px;
+  height: auto;
+  margin: 0;
   padding: 11px;
   border: 1px solid rgba(34, 58, 50, 0.12);
   border-radius: 8px;
@@ -420,18 +377,12 @@ const onScoreInput = (participantId: string, event: Event) => {
     box-shadow 160ms ease,
     transform 160ms var(--ease-out);
 
-  input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-
-    &:focus-visible + strong {
-      outline: 3px solid rgba(56, 201, 141, 0.24);
-      outline-offset: 3px;
-    }
+  :deep(.el-radio__label) {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    padding-left: 8px;
+    white-space: normal;
   }
 
   strong {
@@ -536,20 +487,6 @@ const onScoreInput = (participantId: string, event: Event) => {
     font-size: 0.78rem;
     font-weight: 800;
   }
-
-  input {
-    width: 100%;
-    min-height: 42px;
-    padding: 0 10px;
-    border: 1px solid rgba(34, 58, 50, 0.16);
-    border-radius: 8px;
-    color: var(--text);
-    font-size: 1.06rem;
-    font-weight: 800;
-    text-align: right;
-    background: rgba(255, 255, 255, 0.82);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
-  }
 }
 
 .control-actions {
@@ -560,18 +497,15 @@ const onScoreInput = (participantId: string, event: Event) => {
 
 .result-button,
 .button {
-  @include button-base;
+  width: 100%;
 }
 
 .result-button--win {
-  color: #ffffff;
-  background: linear-gradient(135deg, var(--teal), var(--mint));
   box-shadow: 0 12px 26px rgba(7, 137, 135, 0.22);
 }
 
 .button--neutral {
   color: var(--text);
-  border-color: rgba(34, 58, 50, 0.16);
   background: linear-gradient(180deg, #ffffff, #eef5f1);
 }
 

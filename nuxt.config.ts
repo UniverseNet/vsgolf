@@ -49,7 +49,7 @@ export default defineNuxtConfig({
       },
     },
   },
-  modules: ["@vite-pwa/nuxt"],
+  modules: ["@vite-pwa/nuxt", "@element-plus/nuxt"],
   devtools: {enabled: false},
   components: [
     {
@@ -61,7 +61,7 @@ export default defineNuxtConfig({
       pathPrefix: false,
     },
   ],
-  css: ["~/assets/css/base.css"],
+  css: ["~/assets/css/base.css", "element-plus/dist/index.css", "~/assets/css/element-plus.scss"],
   app: {
     baseURL: appBaseURL,
     head: {

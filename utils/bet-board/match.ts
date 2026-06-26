@@ -451,6 +451,38 @@ export const buildMatchState = (board: {
       return
     }
 
+    const scoreDetails: RoundScoreDetail[] = scores.map((score) => {
+      const participant = participantStateMap.get(score.participantId)
+
+      if (!participant || !isScoredRound) {
+        return score
+      }
+
+      const shareBefore = participant.share
+      const handicapBefore = participant.handicap
+      const shareAfter =
+        !isDraw && participant.id === winner?.id
+          ? Math.max(0, shareBefore - 1)
+          : !isDraw && participant.id === loser?.id
+            ? shareBefore + 1
+            : shareBefore
+      const handicapAfter =
+        !isDraw && participant.id === winner?.id
+          ? Math.max(HANDICAP_MIN, handicapBefore - 1)
+          : !isDraw && participant.id === loser?.id
+            ? handicapBefore + 1
+            : handicapBefore
+
+      return {
+        ...score,
+        shareDelta: shareAfter - shareBefore,
+        shareAfter,
+        handicapBefore,
+        handicapDelta: handicapAfter - handicapBefore,
+        handicapAfter,
+      }
+    })
+
     if (winner && loser && !isDraw) {
       winner.share = Math.max(0, winner.share - 1)
       loser.share += 1
@@ -476,7 +508,7 @@ export const buildMatchState = (board: {
       loserName: loser?.name ?? '',
       loserShare: loser?.share ?? 0,
       loserHandicap: loser?.handicap ?? 0,
-      scores,
+      scores: scoreDetails,
       winnerId: winner?.id ?? '',
       winnerName: winner?.name ?? '',
       winnerShare: winner?.share ?? 0,

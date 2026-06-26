@@ -1,21 +1,12 @@
 <script setup lang="ts">
 const route = useRoute()
-const router = useRouter()
-const { appState, activeMatch, MIN_PARTICIPANTS } = useBetBoardContext()
+const { activeMatch, MIN_PARTICIPANTS } = useBetBoardContext()
 
 const canStartRound = computed(() => (activeMatch.value?.participants.length ?? 0) >= MIN_PARTICIPANTS)
 const followUpLink = computed(() =>
   canStartRound.value ? `/match/${route.params.id}/play` : `/match/${route.params.id}`,
 )
 const followUpLabel = computed(() => (canStartRound.value ? '라운드 입력으로 이동 →' : '내기 개요로 이동 →'))
-
-onMounted(() => {
-  const matchId = route.params.id as string
-
-  if (!appState.value.matches.some((match) => match.id === matchId)) {
-    router.replace('/')
-  }
-})
 </script>
 
 <template>

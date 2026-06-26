@@ -145,6 +145,35 @@ const formatSignedWon = (value: number | null) => {
   return value > 0 ? `+${formatWon(value)}` : `-${formatWon(Math.abs(value))}`
 }
 
+const formatHandicapChangeText = ({
+  handicapAfter,
+  handicapBefore,
+  handicapDelta,
+}: {
+  handicapAfter?: number
+  handicapBefore?: number
+  handicapDelta?: number
+}) => {
+  if (typeof handicapDelta !== 'number') {
+    return isSettlementExcluded.value ? '유지' : '-'
+  }
+
+  const previousHandicap =
+    typeof handicapBefore === 'number'
+      ? handicapBefore
+      : typeof handicapAfter === 'number'
+        ? handicapAfter - handicapDelta
+        : undefined
+
+  if (typeof previousHandicap !== 'number' || typeof handicapAfter !== 'number') {
+    return formatSignedDecimal(handicapDelta)
+  }
+
+  return `${formatHandicap(previousHandicap)} → ${formatHandicap(handicapAfter)} (${formatSignedDecimal(
+    handicapDelta,
+  )})`
+}
+
 const getParticipantCostFromShares = (
   participantId: string,
   shares: Array<{ id: string; share: number }>,
@@ -221,14 +250,7 @@ const scoreRecordRows = computed(() =>
           : isSettlementExcluded.value
             ? '0점'
             : '-',
-      handicapChangeText:
-        typeof score.handicapDelta === 'number'
-          ? `${formatSignedDecimal(score.handicapDelta)} → ${
-              typeof score.handicapAfter === 'number' ? formatHandicap(score.handicapAfter) : '-'
-            }`
-          : isSettlementExcluded.value
-            ? '0'
-            : '-',
+      handicapChangeText: formatHandicapChangeText(score),
       costChangeText:
         isRankFundEntry.value && fundAmountDelta !== null
           ? `${formatSignedWon(fundAmountDelta)} → ${formatWon(score.fundAmountAfter ?? 0)}`

@@ -110,6 +110,7 @@ export const useBetBoard = () => {
   const saveStatusAnimating = ref(false)
   const boardRoundFeedback = ref(false)
   const isRemoteStoreConnected = ref(false)
+  const isStoreReady = ref(!isRemoteStoreEnabled)
   const isPartialRound = ref(false)
   const holesPlayedInput = ref('9')
   const partialRoundPolicy = ref<PartialRoundPolicy>(PARTIAL_ROUND_POLICY_PRORATE)
@@ -554,6 +555,7 @@ export const useBetBoard = () => {
   const initializeRemoteStore = async () => {
     if (!import.meta.client || !isRemoteStoreEnabled) {
       persistState()
+      isStoreReady.value = true
       return
     }
 
@@ -594,6 +596,8 @@ export const useBetBoard = () => {
       console.warn('Supabase에서 내기 정보를 불러오지 못했습니다.', error)
       isRemoteStoreConnected.value = false
       flashSaveStatus('Supabase 연결 실패')
+    } finally {
+      isStoreReady.value = true
     }
   }
 
@@ -1090,6 +1094,7 @@ export const useBetBoard = () => {
     boardRoundFeedback,
     isRemoteStoreEnabled,
     isRemoteStoreConnected,
+    isStoreReady,
     isPartialRound,
     holesPlayedInput,
     partialRoundPolicy,

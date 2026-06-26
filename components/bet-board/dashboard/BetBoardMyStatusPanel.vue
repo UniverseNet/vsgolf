@@ -43,6 +43,13 @@ const myStatusStyle = computed(() => ({
   '--my-status-percent': `${myParticipantSummary.value?.participant.percent ?? 0}%`,
 }))
 
+const myParticipantModel = computed({
+  get: () => myParticipantId.value ?? '',
+  set: (participantId: string) => {
+    setMyParticipant(participantId)
+  },
+})
+
 const latestChangeMetaItems = computed(() => {
   const latestChange = myParticipantSummary.value?.latestChange
 
@@ -71,9 +78,6 @@ const latestChangeMetaItems = computed(() => {
     .filter(Boolean)
 })
 
-const onSelectMyParticipant = (event: Event) => {
-  setMyParticipant((event.target as HTMLSelectElement).value)
-}
 </script>
 
 <template>
@@ -86,15 +90,19 @@ const onSelectMyParticipant = (event: Event) => {
 
       <label v-if="participantsWithCosts.length > 1" class="my-status__selector" for="myParticipantSelect">
         <span>내 기준</span>
-        <select id="myParticipantSelect" :value="myParticipantId" @change="onSelectMyParticipant">
-          <option
+        <ElSelect
+          id="myParticipantSelect"
+          v-model="myParticipantModel"
+          fit-input-width
+          aria-label="내 기준 참가자"
+        >
+          <ElOption
             v-for="participant in participantsWithCosts"
             :key="participant.id"
+            :label="participant.name"
             :value="participant.id"
-          >
-            {{ participant.name }}
-          </option>
-        </select>
+          />
+        </ElSelect>
       </label>
     </div>
 
@@ -203,15 +211,12 @@ const onSelectMyParticipant = (event: Event) => {
   font-size: 0.78rem;
   font-weight: 800;
 
-  select {
+  :deep(.el-select) {
+    width: 100%;
+  }
+
+  :deep(.el-select__wrapper) {
     min-height: 38px;
-    padding: 0 34px 0 11px;
-    border: 1px solid rgba(34, 58, 50, 0.14);
-    border-radius: 8px;
-    color: var(--text);
-    font-size: 0.86rem;
-    font-weight: 800;
-    background: #fff;
   }
 }
 

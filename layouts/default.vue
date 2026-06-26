@@ -1,18 +1,28 @@
 <script setup lang="ts">
 const route = useRoute()
+const router = useRouter()
 const board = provideBetBoard()
 
 const isMatchRoute = computed(() => route.path.includes('/match/'))
 
 watch(
-  () => route.params.id,
-  (matchId) => {
+  () => ({
+    isStoreReady: board.isStoreReady.value,
+    matchId: route.params.id,
+    matchIds: board.appState.value.matches.map((match) => match.id).join('|'),
+  }),
+  ({ isStoreReady, matchId }) => {
     if (typeof matchId !== 'string') {
       return
     }
 
     if (board.appState.value.matches.some((match) => match.id === matchId)) {
       board.switchMatch(matchId)
+      return
+    }
+
+    if (isStoreReady) {
+      router.replace('/')
     }
   },
   { immediate: true },

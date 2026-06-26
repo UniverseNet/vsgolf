@@ -1,17 +1,3 @@
-<script setup lang="ts">
-const route = useRoute()
-const router = useRouter()
-const { appState } = useBetBoardContext()
-
-onMounted(() => {
-  const matchId = route.params.id as string
-
-  if (!appState.value.matches.some((match) => match.id === matchId)) {
-    router.replace('/')
-  }
-})
-</script>
-
 <template>
   <div class="match-page">
     <PageIntro
