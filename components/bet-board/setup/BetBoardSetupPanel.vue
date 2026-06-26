@@ -67,6 +67,18 @@ const settlementModeModel = computed<SettlementMode>({
   set: (mode) => setSettlementMode(mode),
 })
 
+const formatAmountInput = (value: number | string) => {
+  const numericValue = Number(String(value).replace(/\D/g, ''))
+
+  if (!Number.isFinite(numericValue)) {
+    return ''
+  }
+
+  return numericValue.toLocaleString('ko-KR')
+}
+
+const parseAmountInput = (value: string) => value.replace(/\D/g, '')
+
 const newParticipantHandicapModel = computed({
   get: () => Number(newParticipantHandicap.value),
   set: (value: number | undefined) => {
@@ -169,7 +181,9 @@ const onFundRankAllocationChange = (rankIndex: number, amount: number | null | u
               :model-value="fundRule.roundAmount"
               :min="0"
               :step="1000"
-              controls-position="right"
+              :controls="false"
+              :formatter="formatAmountInput"
+              :parser="parseAmountInput"
               :disabled="!canEditSettlementRule"
               @change="onFundRoundAmountChange"
             />
@@ -196,7 +210,9 @@ const onFundRankAllocationChange = (rankIndex: number, amount: number | null | u
               :model-value="rankAmount"
               :min="0"
               :step="1000"
-              controls-position="right"
+              :controls="false"
+              :formatter="formatAmountInput"
+              :parser="parseAmountInput"
               :disabled="!canEditSettlementRule"
               @change="onFundRankAllocationChange(rankIndex, $event)"
             />
@@ -235,7 +251,7 @@ const onFundRankAllocationChange = (rankIndex: number, amount: number | null | u
           :min="0"
           :max="99"
           :step="1"
-          controls-position="right"
+          :controls="false"
         />
       </label>
 
@@ -355,6 +371,7 @@ const onFundRankAllocationChange = (rankIndex: number, amount: number | null | u
 }
 
 .settlement-mode-option {
+  position: relative;
   display: grid;
   gap: 5px;
   align-items: start;
@@ -375,8 +392,22 @@ const onFundRankAllocationChange = (rankIndex: number, amount: number | null | u
     display: grid;
     gap: 5px;
     min-width: 0;
-    padding-left: 8px;
+    padding-left: 0;
     white-space: normal;
+  }
+
+  :deep(.el-radio__input) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  :deep(.el-radio__original) {
+    width: 1px;
+    height: 1px;
   }
 
   strong {
@@ -400,6 +431,16 @@ const onFundRankAllocationChange = (rankIndex: number, amount: number | null | u
   &--active {
     border-color: rgba(7, 137, 135, 0.3);
     background: linear-gradient(135deg, var(--teal-soft), rgba(255, 255, 255, 0.78));
+
+    &::after {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      color: var(--teal);
+      font-size: 0.76rem;
+      font-weight: 900;
+      content: '선택됨';
+    }
   }
 }
 

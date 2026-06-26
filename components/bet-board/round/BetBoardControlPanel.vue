@@ -134,7 +134,7 @@ const onScoreInput = (participantId: string, score: number | undefined) => {
             :min="1"
             :max="TOTAL_ROUND_HOLES - 1"
             :step="1"
-            controls-position="right"
+            :controls="false"
             @keydown.enter.prevent="applyRoundResult"
           />
         </label>
@@ -187,7 +187,7 @@ const onScoreInput = (participantId: string, score: number | undefined) => {
             :min="1"
             :max="200"
             :step="1"
-            controls-position="right"
+            :controls="false"
             placeholder="타수"
             @update:model-value="onScoreInput(participant.id, $event)"
             @keydown.enter.prevent="applyRoundResult"
@@ -360,6 +360,7 @@ const onScoreInput = (participantId: string, score: number | undefined) => {
 }
 
 .partial-policy {
+  position: relative;
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -381,8 +382,22 @@ const onScoreInput = (participantId: string, score: number | undefined) => {
     display: grid;
     gap: 4px;
     min-width: 0;
-    padding-left: 8px;
+    padding-left: 0;
     white-space: normal;
+  }
+
+  :deep(.el-radio__input) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  :deep(.el-radio__original) {
+    width: 1px;
+    height: 1px;
   }
 
   strong {
@@ -404,6 +419,16 @@ const onScoreInput = (participantId: string, score: number | undefined) => {
     border-color: rgba(7, 137, 135, 0.3);
     background: rgba(221, 246, 243, 0.82);
     box-shadow: 0 8px 18px rgba(16, 26, 23, 0.07);
+
+    &::after {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: var(--teal);
+      font-size: 0.72rem;
+      font-weight: 900;
+      content: '선택됨';
+    }
   }
 }
 
