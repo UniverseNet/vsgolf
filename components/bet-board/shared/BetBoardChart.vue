@@ -18,6 +18,8 @@ const props = withDefaults(defineProps<ChartProps>(), {
   height: 260,
 })
 
+let chartRenderId = 0
+let isComponentMounted = false
 const canvasElement = ref<HTMLCanvasElement | null>(null)
 const chartInstance = shallowRef<Chart | null>(null)
 
@@ -67,12 +69,18 @@ const destroyChart = () => {
 }
 
 const renderChart = async () => {
+  const currentRenderId = ++chartRenderId
+
   if (!import.meta.client || shouldShowEmpty.value || !canvasElement.value) {
     destroyChart()
     return
   }
 
   const ChartConstructor = await resolveChartConstructor()
+
+  if (currentRenderId !== chartRenderId || !isComponentMounted) {
+    return
+  }
 
   if (shouldShowEmpty.value || !canvasElement.value) {
     destroyChart()
@@ -92,10 +100,13 @@ watch(
 )
 
 onMounted(() => {
+  isComponentMounted = true
   void renderChart()
 })
 
 onBeforeUnmount(() => {
+  isComponentMounted = false
+  chartRenderId += 1
   destroyChart()
 })
 </script>

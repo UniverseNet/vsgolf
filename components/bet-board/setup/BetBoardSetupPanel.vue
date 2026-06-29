@@ -86,6 +86,24 @@ const newParticipantHandicapModel = computed({
   },
 })
 
+const sessionTitleModel = computed({
+  get: () => activeMatch.value?.title ?? '',
+  set: (title: string) => {
+    if (activeMatch.value) {
+      activeMatch.value.title = title
+    }
+  },
+})
+
+const sessionDateModel = computed({
+  get: () => activeMatch.value?.date ?? '',
+  set: (date: string) => {
+    if (activeMatch.value) {
+      activeMatch.value.date = date
+    }
+  },
+})
+
 const onFundRoundAmountChange = (amount: number | null | undefined) => {
   updateFundRoundAmount(amount ?? 0)
 }
@@ -110,7 +128,7 @@ const onFundRankAllocationChange = (rankIndex: number, amount: number | null | u
         <span>내기 이름</span>
         <ElInput
           id="sessionTitleInput"
-          v-model="activeMatch!.title"
+          v-model="sessionTitleModel"
           :maxlength="24"
           placeholder="내기"
           autocomplete="off"
@@ -123,7 +141,7 @@ const onFundRankAllocationChange = (rankIndex: number, amount: number | null | u
         <span>내기 날짜</span>
         <ElDatePicker
           id="sessionDateInput"
-          v-model="activeMatch!.date"
+          v-model="sessionDateModel"
           type="date"
           value-format="YYYY-MM-DD"
           format="YYYY.MM.DD"

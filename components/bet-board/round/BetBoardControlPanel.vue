@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ElMessageBox } from 'element-plus'
 import type { PartialRoundPolicy } from '~/types/bet-board'
 import {
   PARTIAL_ROUND_POLICY_EXCLUDE,
@@ -86,6 +87,24 @@ const getScoreInputNumber = (participantId: string) => {
 
 const onScoreInput = (participantId: string, score: number | undefined) => {
   setScoreInput(participantId, typeof score === 'number' ? String(score) : '')
+}
+
+const confirmResetBoard = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '입력된 라운드 기록과 정산 기준 금액을 초기 상태로 되돌립니다.',
+      '내기 기록 초기화',
+      {
+        autofocus: false,
+        cancelButtonText: '취소',
+        confirmButtonText: '초기화',
+        type: 'warning',
+      },
+    )
+    resetBoard()
+  } catch {
+    // 사용자가 취소한 경우 별도 안내 없이 현재 상태를 유지합니다.
+  }
 }
 </script>
 
@@ -214,7 +233,7 @@ const onScoreInput = (participantId: string, score: number | undefined) => {
       >
         되돌리기
       </ElButton>
-      <ElButton class="button button--neutral" size="large" @click="resetBoard">
+      <ElButton class="button button--neutral" size="large" @click="confirmResetBoard">
         초기화
       </ElButton>
     </div>
