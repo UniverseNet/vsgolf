@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { ChartData, ChartOptions } from 'chart.js'
+import { getParticipantChartPalette } from '~/utils/bet-board/chart'
+
 const {
   activeMatch,
   matchState,
@@ -21,6 +24,85 @@ const {
 const fundProgressStyle = computed(() => ({
   '--fund-progress-percent': `${fundProgressPercent.value}%`,
 }))
+
+const settlementDistributionTotal = computed(() =>
+  isRankFundMode.value ? matchState.value.totalFundAmount : dinnerPrice.value,
+)
+
+const settlementDistributionItems = computed(() =>
+  participantsWithCosts.value.map((participant, index) => {
+    const palette = getParticipantChartPalette(index)
+    const percent =
+      settlementDistributionTotal.value > 0
+        ? (participant.cost / settlementDistributionTotal.value) * 100
+        : 0
+
+    return {
+      color: palette.borderColor,
+      cost: participant.cost,
+      id: participant.id,
+      name: participant.name,
+      percent,
+    }
+  }),
+)
+
+const settlementDistributionChartData = computed<ChartData<'doughnut', number[], string>>(() => ({
+  labels: participantsWithCosts.value.map((participant) => participant.name),
+  datasets: [
+    {
+      backgroundColor: participantsWithCosts.value.map(
+        (_, index) => getParticipantChartPalette(index).backgroundColor,
+      ),
+      borderColor: '#ffffff',
+      borderWidth: 2,
+      data: participantsWithCosts.value.map((participant) => participant.cost),
+      hoverBackgroundColor: participantsWithCosts.value.map(
+        (_, index) => getParticipantChartPalette(index).hoverBackgroundColor,
+      ),
+      hoverOffset: 6,
+      label: isRankFundMode.value ? '누적 적립' : '최종 정산',
+    },
+  ],
+}))
+
+const settlementDistributionChartOptions = computed<ChartOptions<'doughnut'>>(() => ({
+  cutout: '60%',
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      labels: {
+        boxHeight: 8,
+        boxWidth: 8,
+        color: '#667670',
+        font: {
+          size: 11,
+          weight: 800,
+        },
+        usePointStyle: true,
+      },
+      position: 'bottom',
+    },
+    tooltip: {
+      callbacks: {
+        label: (context) => {
+          const value = Number(context.raw ?? 0)
+          const percent =
+            settlementDistributionTotal.value > 0
+              ? (value / settlementDistributionTotal.value) * 100
+              : 0
+
+          return `${context.label} ${formatWon(value)} · ${percent.toFixed(1)}%`
+        },
+      },
+    },
+  },
+  responsive: true,
+}))
+
+const isSettlementDistributionEmpty = computed(() =>
+  participantsWithCosts.value.length === 0 || settlementDistributionTotal.value <= 0,
+)
 </script>
 
 <template>
@@ -78,6 +160,49 @@ const fundProgressStyle = computed(() => ({
         <strong>{{ leadingParticipant?.name ?? '-' }}</strong>
         <small v-if="isRankFundMode">현재 적립 {{ formatWon(matchState.totalFundAmount) }}</small>
       </article>
+    </div>
+
+    <div class="settlement-visual" aria-label="참가자별 최종 분포">
+      <div class="settlement-visual__chart">
+        <div class="settlement-visual__title">
+          <span>{{ isRankFundMode ? '적립 분포' : '정산 분포' }}</span>
+          <strong>{{ formatWon(settlementDistributionTotal) }}</strong>
+        </div>
+        <BetBoardChart
+          :aria-label="isRankFundMode ? '참가자별 누적 적립 분포' : '참가자별 최종 정산 분포'"
+          :data="settlementDistributionChartData"
+          :empty-text="isRankFundMode ? '라운드를 기록하면 적립 분포가 표시됩니다.' : '정산 금액을 입력하면 분포가 표시됩니다.'"
+          :height="230"
+          :is-empty="isSettlementDistributionEmpty"
+          :options="settlementDistributionChartOptions"
+          type="doughnut"
+        />
+      </div>
+
+      <div class="settlement-visual__bars">
+        <article
+          v-for="distributionItem in settlementDistributionItems"
+          :key="distributionItem.id"
+          class="settlement-visual__bar-item"
+        >
+          <div class="settlement-visual__bar-header">
+            <span>
+              <i :style="{ background: distributionItem.color }" />
+              {{ distributionItem.name }}
+            </span>
+            <strong>{{ formatWon(distributionItem.cost) }}</strong>
+          </div>
+          <div class="settlement-visual__bar-track" aria-hidden="true">
+            <span
+              :style="{
+                background: distributionItem.color,
+                width: `${distributionItem.percent}%`,
+              }"
+            />
+          </div>
+          <small>{{ distributionItem.percent.toFixed(1) }}%</small>
+        </article>
+      </div>
     </div>
 
     <div class="settlement-participants" aria-label="참가자별 최종 정산">
@@ -209,6 +334,112 @@ const fundProgressStyle = computed(() => ({
   }
 }
 
+.settlement-visual {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.86fr) minmax(0, 1.14fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.settlement-visual__chart,
+.settlement-visual__bars {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(34, 58, 50, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.settlement-visual__chart {
+  display: grid;
+  gap: 10px;
+}
+
+.settlement-visual__title {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+
+  span {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+
+  strong {
+    color: var(--text);
+    font-size: 1.16rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+}
+
+.settlement-visual__bars {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+}
+
+.settlement-visual__bar-item {
+  display: grid;
+  gap: 6px;
+
+  small {
+    justify-self: end;
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 800;
+  }
+}
+
+.settlement-visual__bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  i {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    margin-right: 7px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(16, 26, 23, 0.05);
+  }
+
+  strong {
+    color: var(--text);
+    font-size: 0.92rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+}
+
+.settlement-visual__bar-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(16, 26, 23, 0.09);
+
+  span {
+    display: block;
+    min-width: 2px;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 560ms var(--ease-out);
+  }
+}
+
 .settlement-participants {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -253,6 +484,10 @@ const fundProgressStyle = computed(() => ({
 @media (max-width: 960px) {
   .settlement-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .settlement-visual {
+    grid-template-columns: 1fr;
   }
 
   .settlement-card--wide {

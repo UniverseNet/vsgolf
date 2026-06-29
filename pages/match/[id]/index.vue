@@ -14,6 +14,7 @@ const { boardRoundFeedback, isRankFundMode } = useBetBoardContext()
     <BetBoardMyStatusPanel />
     <BetBoardProgressGuide />
     <BetBoardDashboard />
+    <BetBoardVisualInsightPanel />
   </div>
 </template>
 

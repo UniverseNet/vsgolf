@@ -10,6 +10,7 @@ const { isRankFundMode } = useBetBoardContext()
       :description="isRankFundMode ? '누적 적립금과 핸디 변화를 확인하세요.' : '부담 비율과 핸디 변화를 확인하세요.'"
     />
     <BetBoardMyStatusPanel />
+    <BetBoardVisualInsightPanel />
     <BetBoardSplitPanel />
     <BetBoardHandicapPanel />
   </div>
@@ -32,6 +33,10 @@ const { isRankFundMode } = useBetBoardContext()
     }
 
     :deep(.my-status) {
+      grid-column: 1 / -1;
+    }
+
+    :deep(.visual-insight) {
       grid-column: 1 / -1;
     }
   }
