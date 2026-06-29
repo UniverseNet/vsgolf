@@ -1,4 +1,4 @@
-:root {
+html:root {
   --el-color-primary: var(--teal);
   --el-color-primary-light-3: #35aaa0;
   --el-color-primary-light-5: #84ccc4;
@@ -28,18 +28,18 @@
   --el-font-weight-primary: 800;
 }
 
-.el-button {
+button.el-button {
   --el-button-border-radius: 8px;
   min-height: 40px;
   font-weight: 800;
 }
 
-.el-button + .el-button,
-.el-radio.is-bordered + .el-radio.is-bordered {
+button.el-button + button.el-button,
+label.el-radio.is-bordered + label.el-radio.is-bordered {
   margin-left: 0;
 }
 
-.el-button--primary {
+button.el-button.el-button--primary {
   --el-button-bg-color: var(--teal);
   --el-button-border-color: var(--teal);
   --el-button-hover-bg-color: #0d9b8e;
@@ -48,81 +48,81 @@
   --el-button-active-border-color: #0d6f5f;
 }
 
-.el-button--large {
+button.el-button.el-button--large {
   min-height: 48px;
 }
 
-.el-input,
-.el-date-editor.el-input,
-.el-input-number {
+div.el-input,
+div.el-date-editor.el-input,
+div.el-input-number {
   --el-input-height: 48px;
   width: 100%;
 }
 
-.el-input__wrapper,
-.el-textarea__inner {
+div.el-input__wrapper,
+textarea.el-textarea__inner {
   border-radius: 8px;
   box-shadow: 0 0 0 1px var(--border) inset;
 }
 
-.el-input__wrapper:hover,
-.el-textarea__inner:hover {
+div.el-input__wrapper:hover,
+textarea.el-textarea__inner:hover {
   box-shadow: 0 0 0 1px rgba(7, 137, 135, 0.28) inset;
 }
 
-.el-input__wrapper.is-focus,
-.el-textarea__inner:focus {
+div.el-input__wrapper.is-focus,
+textarea.el-textarea__inner:focus {
   box-shadow:
     0 0 0 1px var(--teal) inset,
     0 0 0 3px rgba(7, 137, 135, 0.12);
 }
 
-.el-input__inner,
-.el-input-number .el-input__inner {
+input.el-input__inner,
+.el-input-number input.el-input__inner {
   color: var(--text);
   font-weight: 700;
 }
 
-.el-input-number .el-input-number__decrease,
-.el-input-number .el-input-number__increase {
+.el-input-number span.el-input-number__decrease,
+.el-input-number span.el-input-number__increase {
   border-color: var(--border);
   color: var(--muted);
 }
 
-.el-radio-button__inner,
-.el-segmented {
+span.el-radio-button__inner,
+div.el-segmented {
   font-weight: 800;
 }
 
-.el-radio {
+label.el-radio {
   margin-right: 0;
 }
 
-.el-radio.is-bordered {
+label.el-radio.is-bordered {
   height: auto;
 }
 
-.el-select {
+div.el-select {
   width: 100%;
 }
 
-.el-select__wrapper {
+div.el-select__wrapper {
   border-radius: 8px;
   box-shadow: 0 0 0 1px var(--border) inset;
 }
 
-.el-select__wrapper:hover {
+div.el-select__wrapper:hover {
   box-shadow: 0 0 0 1px rgba(7, 137, 135, 0.28) inset;
 }
 
-.el-select__wrapper.is-focused,
-.el-select__wrapper.is-hovering {
+div.el-select__wrapper.is-focused,
+div.el-select__wrapper.is-hovering {
   box-shadow:
     0 0 0 1px var(--teal) inset,
     0 0 0 3px rgba(7, 137, 135, 0.12);
 }
 
-.el-message,
-.el-message-box {
+div.el-message,
+div.el-message-box {
   border-radius: var(--radius-md);
 }
