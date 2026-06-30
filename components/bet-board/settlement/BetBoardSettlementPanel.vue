@@ -169,7 +169,7 @@ const isSettlementDistributionEmpty = computed(() =>
           <strong>{{ formatWon(settlementDistributionTotal) }}</strong>
         </div>
         <BetBoardChart
-          :aria-label="isRankFundMode ? '참가자별 누적 적립 분포' : '참가자별 최종 정산 분포'"
+          :chart-label="isRankFundMode ? '참가자별 누적 적립 분포' : '참가자별 최종 정산 분포'"
           :data="settlementDistributionChartData"
           :empty-text="isRankFundMode ? '라운드를 기록하면 적립 분포가 표시됩니다.' : '정산 금액을 입력하면 분포가 표시됩니다.'"
           :height="230"

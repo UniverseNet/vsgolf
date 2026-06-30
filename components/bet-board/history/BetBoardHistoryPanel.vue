@@ -92,7 +92,7 @@ const isHistoryRoundMixEmpty = computed(() => matchState.value.recordedRoundCoun
           <small>정산 반영 {{ matchState.settlementRoundCount }}R</small>
         </div>
         <BetBoardChart
-          aria-label="라운드 구성 도표"
+          chart-label="라운드 구성 도표"
           :data="historyRoundMixChartData"
           empty-text="라운드를 기록하면 구성 도표가 표시됩니다."
           :height="190"

@@ -308,7 +308,7 @@ const roundTrendChartOptions = computed<ChartOptions<'line'>>(() => ({
           <span>{{ participantDistributionMetaText }}</span>
         </header>
         <BetBoardChart
-          :aria-label="participantDistributionTitle"
+          :chart-label="participantDistributionTitle"
           :data="participantDistributionChartData"
           :empty-text="isRankFundMode ? '라운드를 기록하면 적립 분포가 표시됩니다.' : '정산 금액을 입력하면 분포가 표시됩니다.'"
           :height="distributionChartHeight"
@@ -324,7 +324,7 @@ const roundTrendChartOptions = computed<ChartOptions<'line'>>(() => ({
           <span>{{ roundTrendMetaText }}</span>
         </header>
         <BetBoardChart
-          :aria-label="roundTrendTitle"
+          :chart-label="roundTrendTitle"
           :data="roundTrendChartData"
           empty-text="라운드를 기록하면 변화 추세가 표시됩니다."
           :height="280"
