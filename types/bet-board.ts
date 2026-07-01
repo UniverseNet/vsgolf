@@ -149,6 +149,26 @@ export interface RoundScoreSummary {
   scores?: ScoreEntry[]
 }
 
+export interface ParticipantRoundChange {
+  round: number
+  label: string
+  rank?: number
+  strokes?: number
+  adjustedStrokes?: number
+  shareDelta: number
+  handicapDelta: number
+  costDelta: number
+}
+
+export interface MyParticipantSummary {
+  participant: ParticipantWithCost
+  initialCost: number
+  costDelta: number
+  shareDelta: number
+  handicapDelta: number
+  latestChange: ParticipantRoundChange | null
+}
+
 export interface MatchState {
   participants: ParticipantState[]
   history: ScoredRoundHistoryEntry[]

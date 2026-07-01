@@ -2,9 +2,9 @@ import type {
   AppState,
   FundRule,
   Match,
+  MyParticipantSummary,
   PartialRoundPolicy,
   ParticipantWithCost,
-  ScoredRoundHistoryEntry,
   RoundCompletionStatus,
   SettlementMode,
 } from '~/types/bet-board'
@@ -12,7 +12,6 @@ import {
   DEFAULT_FUND_ROUND_AMOUNT,
   DEFAULT_DINNER_PRICE,
   DEFAULT_INITIAL_HANDICAP,
-  DEFAULT_PARTICIPANT_SHARE,
   MAX_MATCHES,
   MIN_PARTICIPANTS,
   PARTIAL_ROUND_POLICY_PRORATE,
@@ -21,7 +20,6 @@ import {
   ROUND_RULE_FIELD_AVERAGE,
   SETTLEMENT_MODE_RANK_FUND,
   SETTLEMENT_MODE_SHARE_RATIO,
-  STORAGE_KEY,
   TOTAL_ROUND_HOLES,
 } from '~/utils/bet-board/constants'
 import {
@@ -33,10 +31,6 @@ import {
   getHistoryAdjustmentText,
   getHistoryFundText,
   getHistoryScoreText,
-  getLeaderText,
-  getLeadingParticipant,
-  getLowestBurdenParticipant,
-  getLowestBurdenText,
   getSessionMetaText,
   getShareRatioText,
 } from '~/utils/bet-board/format'
@@ -63,54 +57,24 @@ import {
   normalizeRoundHistory,
   normalizeSettlementMode,
   normalizeSessionTitle,
-  serializeAppState,
 } from '~/utils/bet-board/normalize'
 import {
-  fetchSupabaseBoardState,
-  isSupabaseStoreConfigured,
-  saveSupabaseBoardState,
-  subscribeSupabaseBoardState,
-  type SupabaseStoreConfig,
-} from '~/utils/bet-board/supabase-store'
-
-interface ParticipantRoundChange {
-  round: number
-  label: string
-  rank?: number
-  strokes?: number
-  adjustedStrokes?: number
-  shareDelta: number
-  handicapDelta: number
-  costDelta: number
-}
-
-interface MyParticipantSummary {
-  participant: ParticipantWithCost
-  initialCost: number
-  costDelta: number
-  shareDelta: number
-  handicapDelta: number
-  latestChange: ParticipantRoundChange | null
-}
+  getAverageInitialHandicap,
+  getLeaderTextBySettlementMode,
+  getLeadingParticipantBySettlementMode,
+  getLowestBurdenParticipantBySettlementMode,
+  getLowestBurdenTextBySettlementMode,
+  getMatchSummaryText,
+  getMyParticipantSummary,
+} from '~/utils/bet-board/summary'
+import { useBetBoardPersistence } from '~/composables/bet-board/use.bet-board-persistence'
 
 export const useBetBoard = () => {
-  const runtimeConfig = useRuntimeConfig()
-  const supabaseStoreConfig: SupabaseStoreConfig = {
-    anonKey: String(runtimeConfig.public.supabaseAnonKey || ''),
-    boardId: String(runtimeConfig.public.supabaseBoardId || 'default'),
-    url: String(runtimeConfig.public.supabaseUrl || ''),
-  }
-  const isRemoteStoreEnabled = isSupabaseStoreConfigured(supabaseStoreConfig)
-  let remoteSubscription: ReturnType<typeof subscribeSupabaseBoardState> | null = null
   const appState = ref<AppState>(loadStoredAppState())
   const pendingDeleteParticipantId = ref<string | null>(null)
   const pendingDeleteMatchId = ref<string | null>(null)
   const roundScoreInputs = ref<Record<string, string>>({})
-  const saveStatusText = ref('저장됨')
-  const saveStatusAnimating = ref(false)
   const boardRoundFeedback = ref(false)
-  const isRemoteStoreConnected = ref(false)
-  const isStoreReady = ref(!isRemoteStoreEnabled)
   const isPartialRound = ref(false)
   const holesPlayedInput = ref('9')
   const partialRoundPolicy = ref<PartialRoundPolicy>(PARTIAL_ROUND_POLICY_PRORATE)
@@ -236,73 +200,21 @@ export const useBetBoard = () => {
   const myParticipant = computed(
     () => participantsWithCosts.value.find((participant) => participant.id === myParticipantId.value) ?? null,
   )
-  const leadingParticipant = computed(() => {
-    if (!isRankFundMode.value) {
-      return getLeadingParticipant(participantsWithCosts.value)
-    }
-
-    return participantsWithCosts.value.reduce<ParticipantWithCost | null>(
-      (leadingParticipant, participant) =>
-        !leadingParticipant || participant.cost > leadingParticipant.cost ? participant : leadingParticipant,
-      null,
-    )
-  })
-  const lowestBurdenParticipant = computed(() => {
-    if (!isRankFundMode.value) {
-      return getLowestBurdenParticipant(participantsWithCosts.value)
-    }
-
-    return participantsWithCosts.value.reduce<ParticipantWithCost | null>(
-      (lowestParticipant, participant) =>
-        !lowestParticipant || participant.cost < lowestParticipant.cost ? participant : lowestParticipant,
-      null,
-    )
-  })
+  const leadingParticipant = computed(() =>
+    getLeadingParticipantBySettlementMode(participantsWithCosts.value, isRankFundMode.value),
+  )
+  const lowestBurdenParticipant = computed(() =>
+    getLowestBurdenParticipantBySettlementMode(participantsWithCosts.value, isRankFundMode.value),
+  )
   const shareRatioText = computed(() => getShareRatioText(participantsWithCosts.value))
-  const leaderText = computed(() => {
-    if (!isRankFundMode.value) {
-      return getLeaderText(participantsWithCosts.value)
-    }
-
-    if (participantsWithCosts.value.length === 0) {
-      return '참가자 없음'
-    }
-
-    const highestCost = Math.max(...participantsWithCosts.value.map((participant) => participant.cost))
-
-    return participantsWithCosts.value
-      .filter((participant) => participant.cost === highestCost)
-      .map((participant) => participant.name)
-      .join(', ')
-  })
-  const lowestBurdenText = computed(() => {
-    if (!isRankFundMode.value) {
-      return getLowestBurdenText(participantsWithCosts.value)
-    }
-
-    if (participantsWithCosts.value.length === 0) {
-      return '참가자 없음'
-    }
-
-    const lowestCost = Math.min(...participantsWithCosts.value.map((participant) => participant.cost))
-
-    return participantsWithCosts.value
-      .filter((participant) => participant.cost === lowestCost)
-      .map((participant) => participant.name)
-      .join(', ')
-  })
+  const leaderText = computed(() =>
+    getLeaderTextBySettlementMode(participantsWithCosts.value, isRankFundMode.value),
+  )
+  const lowestBurdenText = computed(() =>
+    getLowestBurdenTextBySettlementMode(participantsWithCosts.value, isRankFundMode.value),
+  )
   const handicapMax = computed(() => getHandicapMax(participantsWithCosts.value))
-
-  const averageInitialHandicap = computed(() => {
-    const participantCount = activeMatch.value?.participants.length ?? 0
-
-    if (participantCount === 0) {
-      return 0
-    }
-
-    const total = activeMatch.value!.participants.reduce((sum, participant) => sum + participant.initialHandicap, 0)
-    return total / participantCount
-  })
+  const averageInitialHandicap = computed(() => getAverageInitialHandicap(activeMatch.value))
 
   const roundPreviewText = computed(() =>
     getRoundScoreSummary(
@@ -341,128 +253,16 @@ export const useBetBoard = () => {
   })
 
   const reversedHistory = computed(() => [...matchState.value.history].reverse())
-  const getParticipantCostFromShares = (
-    participantId: string,
-    shares: Array<{ id: string; share: number }>,
-  ) => {
-    const totalShare = shares.reduce((total, participant) => total + participant.share, 0) || 1
-    let allocatedCost = 0
-
-    return shares.reduce((participantCost, participant, index) => {
-      const isLastParticipant = index === shares.length - 1
-      const cost = isLastParticipant
-        ? Math.max(0, dinnerPrice.value - allocatedCost)
-        : Math.round(dinnerPrice.value * (participant.share / totalShare))
-
-      allocatedCost += cost
-
-      return participant.id === participantId ? cost : participantCost
-    }, 0)
-  }
-
-  const getRoundParticipantChange = (
-    entry: ScoredRoundHistoryEntry,
-    participantId: string,
-  ): ParticipantRoundChange => {
-    const score = entry.scores.find((roundScore) => roundScore.participantId === participantId)
-    const hasDetailedShares = entry.scores.every(
-      (roundScore) => typeof roundScore.shareAfter === 'number',
-    )
-    const label =
-      entry.completionStatus === ROUND_COMPLETION_STATUS_PARTIAL
-        ? `${entry.holesPlayed}홀 부분 반영`
-        : `${entry.round}R 반영`
-
-    if (score && entry.settlementMode === SETTLEMENT_MODE_RANK_FUND) {
-      return {
-        round: entry.round,
-        label,
-        rank: score.fundRank,
-        strokes: score.strokes,
-        adjustedStrokes: score.adjustedStrokes,
-        shareDelta: 0,
-        handicapDelta: score.handicapDelta ?? 0,
-        costDelta: score.fundAmountDelta ?? 0,
-      }
-    }
-
-    if (score && hasDetailedShares) {
-      const beforeShares = entry.scores.map((roundScore) => ({
-        id: roundScore.participantId,
-        share: Math.max(0, (roundScore.shareAfter ?? DEFAULT_PARTICIPANT_SHARE) - (roundScore.shareDelta ?? 0)),
-      }))
-      const afterShares = entry.scores.map((roundScore) => ({
-        id: roundScore.participantId,
-        share: roundScore.shareAfter ?? DEFAULT_PARTICIPANT_SHARE,
-      }))
-
-      return {
-        round: entry.round,
-        label,
-        strokes: score.strokes,
-        adjustedStrokes: score.adjustedStrokes,
-        shareDelta: score.shareDelta ?? 0,
-        handicapDelta: score.handicapDelta ?? 0,
-        costDelta:
-          getParticipantCostFromShares(participantId, afterShares) -
-          getParticipantCostFromShares(participantId, beforeShares),
-      }
-    }
-
-    const afterShares = participantsWithCosts.value.map((participant) => ({
-      id: participant.id,
-      share: participant.share,
-    }))
-    const beforeShares = afterShares.map((participant) => {
-      if (participant.id === entry.winnerId) {
-        return { ...participant, share: participant.share + 1 }
-      }
-
-      if (participant.id === entry.loserId) {
-        return { ...participant, share: Math.max(0, participant.share - 1) }
-      }
-
-      return participant
-    })
-    const shareDelta = participantId === entry.winnerId ? -1 : participantId === entry.loserId ? 1 : 0
-
-    return {
-      round: entry.round,
-      label,
-      strokes: score?.strokes,
-      adjustedStrokes: score?.adjustedStrokes,
-      shareDelta,
-      handicapDelta: shareDelta,
-      costDelta:
-        getParticipantCostFromShares(participantId, afterShares) -
-        getParticipantCostFromShares(participantId, beforeShares),
-    }
-  }
-  const myParticipantSummary = computed<MyParticipantSummary | null>(() => {
-    const participant = myParticipant.value
-
-    if (!participant) {
-      return null
-    }
-
-    const initialShares = matchState.value.participants.map((matchParticipant) => ({
-      id: matchParticipant.id,
-      share: DEFAULT_PARTICIPANT_SHARE,
-    }))
-    const latestSettlementRound = reversedHistory.value.find((entry) => entry.isSettlementApplied)
-    const initialCost = isRankFundMode.value ? 0 : getParticipantCostFromShares(participant.id, initialShares)
-
-    return {
-      participant,
-      initialCost,
-      costDelta: participant.cost - initialCost,
-      shareDelta: participant.share - DEFAULT_PARTICIPANT_SHARE,
-      handicapDelta: participant.handicap - participant.initialHandicap,
-      latestChange: latestSettlementRound
-        ? getRoundParticipantChange(latestSettlementRound, participant.id)
-        : null,
-    }
-  })
+  const myParticipantSummary = computed<MyParticipantSummary | null>(() =>
+    getMyParticipantSummary({
+      dinnerPrice: dinnerPrice.value,
+      isRankFundMode: isRankFundMode.value,
+      matchParticipants: matchState.value.participants,
+      participant: myParticipant.value,
+      participants: participantsWithCosts.value,
+      reversedHistory: reversedHistory.value,
+    }),
+  )
 
   const clearRoundInputs = () => {
     roundScoreInputs.value = {}
@@ -498,108 +298,23 @@ export const useBetBoard = () => {
     dinnerPriceDisplay.value = formatPriceInput(activeMatch.value?.dinnerPrice ?? DEFAULT_DINNER_PRICE)
   }
 
-  const flashSaveStatus = (text: string) => {
-    saveStatusText.value = text
-    saveStatusAnimating.value = true
-    window.setTimeout(() => {
-      saveStatusAnimating.value = false
-    }, 700)
-  }
-
-  const applyRemoteAppState = (nextState: AppState) => {
-    const currentActiveMatchId = appState.value.activeMatchId
-    const activeMatchId = nextState.matches.some((match) => match.id === currentActiveMatchId)
-      ? currentActiveMatchId
-      : nextState.activeMatchId
-
-    appState.value = {
-      ...nextState,
-      activeMatchId,
-    }
-    pendingDeleteParticipantId.value = null
-    pendingDeleteMatchId.value = null
-    syncDinnerPriceFromActiveMatch()
-  }
-
-  const persistState = (statusText = '저장됨') => {
-    if (!import.meta.client) {
-      return
-    }
-
-    syncDinnerPriceToActiveMatch()
-
-    if (isRemoteStoreEnabled) {
-      saveStatusText.value = '실시간 저장 중'
-      void saveSupabaseBoardState(supabaseStoreConfig, appState.value)
-        .then(() => {
-          isRemoteStoreConnected.value = true
-          flashSaveStatus(statusText === '저장됨' ? '실시간 저장됨' : statusText)
-        })
-        .catch((error) => {
-          console.warn('Supabase에 내기 정보를 저장하지 못했습니다.', error)
-          isRemoteStoreConnected.value = false
-          flashSaveStatus('Supabase 저장 실패')
-        })
-      return
-    }
-
-    try {
-      localStorage.setItem(STORAGE_KEY, serializeAppState(appState.value))
-      flashSaveStatus(statusText)
-    } catch (error) {
-      console.warn('내기 정보를 저장하지 못했습니다.', error)
-      flashSaveStatus('저장 실패')
-    }
-  }
-
-  const initializeRemoteStore = async () => {
-    if (!import.meta.client || !isRemoteStoreEnabled) {
-      persistState()
-      isStoreReady.value = true
-      return
-    }
-
-    saveStatusText.value = 'Supabase 연결 중'
-
-    try {
-      const remoteBoardState = await fetchSupabaseBoardState(supabaseStoreConfig)
-
-      if (remoteBoardState) {
-        applyRemoteAppState(remoteBoardState.state)
-        flashSaveStatus('실시간 동기화됨')
-      } else {
-        syncDinnerPriceToActiveMatch()
-        await saveSupabaseBoardState(supabaseStoreConfig, appState.value)
-        flashSaveStatus('공유 보드 생성됨')
-      }
-
-      isRemoteStoreConnected.value = true
-      remoteSubscription = subscribeSupabaseBoardState(supabaseStoreConfig, {
-        onChange: (boardState) => {
-          applyRemoteAppState(boardState.state)
-          isRemoteStoreConnected.value = true
-          flashSaveStatus('실시간 업데이트')
-        },
-        onError: (error) => {
-          console.warn('Supabase 실시간 구독 오류가 발생했습니다.', error)
-          isRemoteStoreConnected.value = false
-          flashSaveStatus('실시간 연결 확인 필요')
-        },
-        onStatus: (status) => {
-          if (status === '연결됨') {
-            isRemoteStoreConnected.value = true
-          }
-        },
-      })
-
-    } catch (error) {
-      console.warn('Supabase에서 내기 정보를 불러오지 못했습니다.', error)
-      isRemoteStoreConnected.value = false
-      flashSaveStatus('Supabase 연결 실패')
-    } finally {
-      isStoreReady.value = true
-    }
-  }
+  const {
+    closeRemoteStore,
+    flashSaveStatus,
+    initializeRemoteStore,
+    isRemoteStoreConnected,
+    isRemoteStoreEnabled,
+    isStoreReady,
+    persistState,
+    saveStatusAnimating,
+    saveStatusText,
+  } = useBetBoardPersistence({
+    appState,
+    pendingDeleteMatchId,
+    pendingDeleteParticipantId,
+    syncDinnerPriceFromActiveMatch,
+    syncDinnerPriceToActiveMatch,
+  })
 
   const playRoundFeedback = () => {
     boardRoundFeedback.value = true
@@ -734,8 +449,7 @@ export const useBetBoard = () => {
   })
 
   onBeforeUnmount(() => {
-    remoteSubscription?.close()
-    remoteSubscription = null
+    closeRemoteStore()
   })
 
   const addParticipant = () => {
@@ -1047,22 +761,6 @@ export const useBetBoard = () => {
       ),
     }))
     persistState()
-  }
-
-  const getMatchSummaryText = (match: Match) => {
-    const board = buildMatchState(match)
-    const participants = getParticipantsWithCosts(board, match.dinnerPrice)
-    const myParticipant =
-      participants.find((participant) => participant.id === match.myParticipantId) ?? participants[0]
-    const myParticipantText = myParticipant
-      ? `내 기준 ${myParticipant.name} ${formatWon(myParticipant.cost)}`
-      : '내 기준 -'
-    const settlementText =
-      board.settlementMode === SETTLEMENT_MODE_RANK_FUND
-        ? `적립 ${formatWon(board.totalFundAmount)}`
-        : `정산 ${board.settlementRoundCount}R`
-
-    return `${match.participants.length}명 · 기록 ${board.recordedRoundCount}R · ${settlementText} · ${myParticipantText}`
   }
 
   const participantStyle = (index: number) => {
